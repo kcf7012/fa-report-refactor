@@ -5,9 +5,9 @@ All notable changes to fa-improver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2026-08-30
+## [3.0.0] - 2026-08-31
 
-### 🎉 重大重構
+### 🎉 重大重構(正式發布版)
 
 從 783 行單體 `improve_fa_report.py` 重構為模組化架構,改善覆蓋率從 50% 提升到 100%。
 
@@ -85,7 +85,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **端對端測試程式**:
   - `test_api_key.py` — API key 驗證
   - `test_llm_end_to_end.py` — 完整 LLM 評估 + 改善流程
-- **測試規範** `TESTING.md`(在 `docs/`)
+- **動態測試環境**:
+  - `conftest.py` 完全動態(不寫死路徑)
+  - 自動向上搜尋專案根目錄
+  - 自動 skip 不可用資源
+- **CHANGELOG.md** (本檔)
+- **更新 SKILL.md** 反映 v3.0 新架構
 
 ### 🔧 改進
 
@@ -104,6 +109,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 日期解析從檔名尾部找 6 位數字
 - `load_dotenv` 路徑修正(從 `find_dotenv(usecwd=True)`)
 - 完全動態 conftest.py(不寫死路徑)
+- `test_missing_api_key_raises` 使用 `skip_dotenv=True` 隔離
+
+### 🧹 清理
+
+- 刪除冗餘的 `fa-report-improvement-changelog.md`(已合併)
+- 刪除開發文件 `PHASE5_TODO.md`(已搬到 `docs/`)
+- 精簡 README.md(只說明技能包使用)
 
 ### 📊 測試
 
@@ -134,6 +146,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 舊 CLI 仍可運作:`python improve_fa_report.py input.pptx eval.json output.pptx`
 - 新 CLI:`python -m fa_improver input.pptx --eval eval.json --output output.pptx`
 - 兩者都委派給相同的底層架構
+
+### 📦 安裝
+
+```bash
+# 推薦使用 uv
+uv sync
+
+# 或使用 pip
+pip install -e ".[dev,llm]"
+
+# 設定 API key(可選)
+cp .env.example .env
+# 編輯 .env 填入 OPENAI_API_KEY
+```
 
 ## [2.3.0] - 2026-01-28
 

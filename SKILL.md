@@ -1,260 +1,122 @@
 ---
 name: fa-report-improvement
-description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. Supports both .ppt and .pptx formats with automatic conversion. Features dynamic content injection from LLM evaluations, multi-format JSON compatibility, and closed-loop execution manifests.
-version: 2.3.0
-entrypoint: scripts/improve_fa_report.py
+description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. v3.0 features modular architecture covering all 6 evaluation dimensions (100% trigger coverage), PPT/PPTX input support, JSON/TXT evaluation parsing, LLM integration (OpenAI-compatible), and 5 visual element generators. Master slide protection guaranteed through snapshot verification.
+version: 3.0.0
+entrypoint: src/fa_improver/__main__.py
 inputs:
   - id: report
-    label: FA 報告 (.ppt/pptx)
+    label: FA 報告 (.ppt/.pptx)
     type: file
     accept: .ppt,.pptx
     icon: 📊
   - id: evaluation_json
-    label: 評核 JSON (.json)
+    label: 評核檔案 (.json/.txt)
     type: file
-    accept: .json
+    accept: .json,.txt
     icon: 📜
   - id: prompt
-    label: 優化提示詞 (選填)
+    label: 額外指令 (選填)
     type: text
-    placeholder: 例如：特別加強根因分析部分的統計數據性，或指定改善對策的具體方向...
+    placeholder: 例如：用 LLM 評估、覆寫觸發門檻、指定樣板目錄...
     optional: true
 ---
 
-# FA Report Improvement
+# FA Report Improvement v3.0
 
-## Overview
+半導體 **F**ailure **A**nalysis 報告的智慧化改善工具,基於 6 維度評分標準。
 
-Comprehensive improvement system for semiconductor FA reports with automatic .ppt to .pptx conversion support.
+## ✨ v3.0 新特性
 
-**Key Features:**
-- ✅ **Multi-Format JSON (v2.3.0)**: Supports both `dimensions` (flat) and `dimension_scores` (nested object) formats for maximum compatibility.
-- ✅ **Object Array Improvements (v2.3.0)**: Handles `improvements` as either string array or object array (`{priority, item, suggestion}`).
-- ✅ **Dynamic Injection (v2.2.0)**: Real-time extraction of improvement suggestions from evaluation JSON.
-- ✅ **Success Manifest (v2.2.0)**: Automated generation of `_manifest.json` for LLM verification.
+| 改進 | v2.3.0 | v3.0.0 |
+|------|--------|--------|
+| 架構 | 783 行單檔 | 35 模組化檔案 |
+| 觸發改善維度 | 3/6 (50%) | **6/6 (100%)** |
+| 母片保護 | 隱性 | 顯性測試驗證 |
+| 樣板系統 | hard-coded | JSON 樣板 + 繼承 |
+| 視覺元素 | 純文字 | 5 種生成器 |
+| LLM 整合 | ❌ | ✅ OpenAI / 相容 API |
+| 環境變數 | ❌ | ✅ .env 自動載入 |
+| 測試覆蓋 | 0 | **89 個** |
+| PPT 輸入 | 手動 | 自動轉換 |
 
-## Quick Start
-
-When user provides FA report (**.ppt or .pptx**) for improvement:
-
-1. **Auto-detect format** - Automatically converts .ppt if needed
-2. **Analyze evaluation** - Parse JSON or text feedback
-3. **Apply improvements** - Add missing critical content
-4. **Verify quality** - Check visual layout
-
-## Supported Formats
-
-### Input Formats
-- ✅ **.pptx** (PowerPoint 2007+) - Direct processing
-- ✅ **.ppt** (PowerPoint 97-2003) - Auto-converts to .pptx
-
-### Conversion Methods
-1. **LibreOffice** (Linux/Mac/Windows) - Primary method
-2. **Win32 COM** (Windows only) - Fallback method
-3. **Manual guidance** - If auto-conversion fails
-
-## Evaluation Dimensions
-
-1. **基本資訊完整性** (15%) - FA number, engineer, batch, contact
-2. **問題描述與定義** (15%) - Clear issue definition  
-3. **分析方法與流程** (20%) - Tools, 8D process
-4. **數據與證據支持** (20%) - Measurements, figures
-5. **根因分析** (20%) - Statistical validation
-6. **改善對策** (10%) - Preventive measures
-
-## Improvement Workflow
-
-### Step 1: Format Detection & Conversion
-
-If .ppt file detected:
-```
-⚠️  Detected legacy format (.ppt)
-✓ LibreOffice conversion attempt...
-✓ Win32 COM fallback (Windows)...
-✓ Conversion successful: report_converted.pptx
-```
-
-### Step 2: Evaluation Analysis
-
-Parse evaluation JSON to identify scores and specific recommendations.
-**JSON Resilience (v2.1.4)**: 
-The script built-in logic automatically sanitizes malformed JSON (e.g., trailing dots, commas, and Markdown code blocks) before parsing. This ensures highly reliable performance when triggered directly via CLI by AI Agents like Claude or Gemini.
-
-**Supported JSON Formats:**
-
-1. **Array Format** (e.g., `_summary_gpt.json`):
-```json
-[{"total_score": 44.3, "dimensions": {...}}]
-```
-
-2. **Object Format** (e.g., `_summary.json`):
-```json
-{"total_score": 55.3, "dimensions": {...}}
-```
-
-3. **Nested Dimension Scores** (v2.3.0 New):
-```json
-{
-  "dimension_scores": {
-    "基本資訊完整性": {"score": 60, "weight": 15, "comment": "..."}
-  },
-  "improvements": [
-    {"priority": "高", "item": "基本資訊", "suggestion": "補填批號..."}
-  ]
-}
-```
-The script auto-detects and normalizes all formats.
-
-### Step 3: Apply Improvements
-
-**Missing Basic Info (Score < 80)**:
-- Add slide with FA#, engineer, batch, customer, contact, failure rate
-
-**Insufficient Root Cause (Score < 80)**:
-- Add statistical analysis: t-test, CI, control groups
-
-**No Prevention (Score < 85)**:
-- Add slide: process improvements, monitoring, training
-
-**Improvement Trigger Thresholds:**
-| Dimension | Threshold | Action |
-|-----------|-----------|--------|
-| 基本資訊完整性 | < 80 | Add dynamic basic info slide with suggestions |
-| 根因分析 | < 80 | Add dynamic statistical analysis from LLM |
-| 改善對策 | < 85 | Add dynamic prevention measures from LLM |
-
-### Step 4: Success Manifest Generation
-The script generates a `[output].manifest.json` recording exactly what was added. This enables **Closed-Loop Verification**:
-```json
-{
-  "execution_status": "success",
-  "added_slides": [{"dimension": "Root Cause", "suggestions_count": 3}],
-  "summary_applied": true
-}
-```
-
-### Step 4: Quality Verification
-
-- Convert to PDF for visual check
-- Verify no text overlap
-- Confirm all additions are clear
-
-## Implementation Details
-
-### Using the Improvement Script
+## 🚀 快速開始
 
 ```bash
-python scripts/improve_fa_report.py input.ppt eval.json output.pptx
-# OR
-python scripts/improve_fa_report.py input.pptx eval.json output.pptx
+# 1. 安裝依賴(推薦使用 uv)
+uv sync
+
+# 2. 設定 API Key(可選,用 LLM 模式時需要)
+cp .env.example .env
+# 編輯 .env 填入 OPENAI_API_KEY
+
+# 3. 執行
+# 方式 A:使用預先生成的評估 JSON(推薦)
+python -m fa_improver report.pptx --eval eval.json --output improved.pptx
+
+# 方式 B:讓 LLM 直接評估(需 API key)
+python -m fa_improver report.pptx --llm-provider openai --output improved.pptx
+
+# 方式 C:離線測試(無需 API)
+python -m fa_improver report.pptx --llm-provider mock --output improved.pptx
 ```
 
-The script automatically:
-1. Detects file format (.ppt or .pptx)
-2. Converts if needed using available tools
-3. Applies all improvements
-4. Saves enhanced report
-5. Cleans up temporary files
+## 📊 6 維度評估 + 改善對應
 
-### Installation
+| 維度 | 權重 | 觸發門檻 | 改善動作 |
+|------|------|---------|---------|
+| 基本資訊完整性 | 15% | < 80 | FA 編號、客戶、批號 |
+| 問題描述與定義 | 15% | < 70 | 失效率、影響範圍 |
+| 分析方法與流程 | 20% | < 70 | 8D 流程、方法對照 |
+| 數據與證據支持 | 20% | < 70 | 對照組數據、圖片品質 |
+| 根因分析 | 20% | < 80 | 5-Why、統計驗證 |
+| 改善對策 | 10% | < 85 | 對策總覽、IQC SOP |
 
-⚠️ **Critical**: Always use virtual environment to avoid dependency conflicts and keep your system clean.
+## 🛠️ 核心模組
 
-**Recommended Install with Virtual Environment**:
+```
+src/fa_improver/         ← 主程式碼
+├── domain/              純資料模型
+├── parsers/             JSON/TXT/檔名解析
+├── layout/              智慧選擇 + 母片保護
+├── improvers/           8 種改善動作
+├── templates/           8 個 JSON 樣板
+├── visuals/             5 種視覺元素
+├── llm/                 LLM 抽象 + OpenAI
+└── utils/               PPT 轉換等
+```
+
+## 🧪 開發
+
 ```bash
-# Create virtual environment
-cd ~/.claude/skills/fa-report-improvement
-python -m venv venv
+# 跑測試
+pytest tests/
 
-# Activate virtual environment
-source venv/bin/activate  # Linux/macOS
-# or
-venv\Scripts\activate     # Windows
+# Lint
+ruff check src/
 
-# Install all dependencies
-pip install -r requirements.txt
-
-# Run installation script (checks everything)
-python scripts/install.py
+# 端對端測試
+python test_api_key.py         # 驗證 API key
+python test_llm_end_to_end.py  # 完整 LLM 評估流程
 ```
 
-**Without Virtual Environment** (Not Recommended):
-```bash
-# ⚠️ Warning: Installs to global Python environment
-pip install -r requirements.txt
-python scripts/install.py
-```
+## 📝 支援的輸入格式
 
-**Why Virtual Environment?**
-- ✅ Prevents dependency conflicts
-- ✅ Keeps system Python clean
-- ✅ Easy to manage and remove
-- ✅ No root/admin privileges needed
-- ✅ Reproducible environments
+- **報告**:`.pptx` (PowerPoint 2007+) / `.ppt` (97-2003,自動轉換)
+- **評估**:`.json` / `.txt` (fa_report_analyzer_v3 格式)
+- **環境**:`.env` 自動載入 (OPENAI_API_KEY 等)
 
-**Python Requirements** (via requirements.txt):
-- python-pptx >= 0.6.21 (Required)
-- Pillow >= 9.0.0 (Required)
-- pywin32 >= 305 (Optional, Windows only)
+## 🛡️ 設計原則
 
-**Conversion Tools** (for .ppt support):
+1. **母片絕對保護** — 自動驗證母片 XML 未變
+2. **不破壞既有 layout** — 只用既有 layout 新增投影片
+3. **向後相容** — 舊 CLI 仍可運作
+4. **可配置** — 樣板可透過 JSON 覆寫
+5. **獨立運作** — 任何團隊 clone 後可立即使用
 
-**LibreOffice method** (All platforms):
-- LibreOffice installed
-- Command-line access (soffice/libreoffice)
-- Linux: `sudo apt install libreoffice`
-- macOS/Windows: Download from https://www.libreoffice.org/
+## 📜 變更記錄
 
-**Win32 COM method** (Windows only):
-- PowerPoint installed
-- pywin32: `pip install pywin32` (included in requirements.txt)
+詳見 `CHANGELOG.md`。
 
-## Best Practices
+## 📄 授權
 
-1. **Format Flexibility**: Accept both .ppt and .pptx from users
-2. **Auto-Detection**: Let script handle format conversion
-3. **Preserve Content**: Only enhance, never replace technical analysis
-4. **Match Formatting**: Maintain original report style
-5. **Verify Data**: Ensure statistical values align with tests
-
-## Error Handling
-
-### Conversion Failures
-
-If auto-conversion fails:
-1. Try manual conversion in PowerPoint
-2. Use online converters (CloudConvert, Zamzar)
-3. Re-save as .pptx manually
-
-### Processing Failures
-
-- Check input file is valid PowerPoint
-- Verify evaluation JSON structure
-- Ensure output directory exists
-- Review error messages for specific issues
-
-- Review error messages for specific issues
-
-### Encoding Issues (Windows)
-- Script enforces UTF-8 output to prevent `cp950` errors.
-- Ensure your terminal supports UTF-8.
-
-## Integration with Other Tools
-
-Works well with:
-- `pptx` skill - Advanced PowerPoint operations
-- `docx` skill - Supplementary documentation
-- `xlsx` skill - Data analysis and statistics
-
-## References
-
-For detailed information:
-- `references/evaluation-criteria.md` - Complete evaluation framework
-- `references/improvement-templates.md` - Standard templates
-- `references/statistical-methods.md` - Statistical validation
-- `references/ppt-conversion-guide.md` - Format conversion details
-
----
-**版本**: 2.2.0  
-**最後更新**: 2026-01-31
-
+MIT License
