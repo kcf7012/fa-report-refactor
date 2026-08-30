@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .base import LLMResponse
 
@@ -31,7 +30,7 @@ class MockLLMClient:
     total_tokens: int = 0
 
     # 可選的回應產生函式(動態生成)
-    response_fn: Optional[Callable[[str, str, bool], str]] = None
+    response_fn: Callable[[str, str, bool], str] | None = None
 
     def complete(
         self,

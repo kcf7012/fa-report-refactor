@@ -3,6 +3,7 @@
 import json
 
 import pytest
+
 from fa_improver.domain.template import (
     BASIC_INFO_TEMPLATE,
     BUILTIN_TEMPLATES,

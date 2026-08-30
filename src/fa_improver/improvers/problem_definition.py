@@ -9,8 +9,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pptx import Presentation
 from pptx.util import Inches
 
@@ -28,7 +26,7 @@ from ..visuals import (
 def add_problem_definition_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
-    dimension: Optional[DimensionScore] = None,
+    dimension: DimensionScore | None = None,
 ) -> None:
     """新增問題描述與定義投影片
 

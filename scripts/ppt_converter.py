@@ -8,7 +8,6 @@ Updated: 2026-01-28
 import os
 import subprocess
 import sys
-from typing import Optional
 
 # 強制 stdout/stderr 使用 utf-8 編碼 (解決 Windows cp950 問題)
 if sys.platform.startswith("win"):
@@ -20,7 +19,7 @@ class PPTConverter:
     def __init__(self):
         self.temp_files = []
 
-    def convert_ppt_to_pptx(self, ppt_path: str) -> Optional[str]:
+    def convert_ppt_to_pptx(self, ppt_path: str) -> str | None:
         """嘗試將 .ppt 轉換為 .pptx
 
         Args:

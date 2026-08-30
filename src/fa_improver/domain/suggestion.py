@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Priority(str, Enum):
@@ -41,8 +40,8 @@ class ActionItem:
     action: str  # 行動內容
     priority: Priority
     timeframe: str  # 立即/短期/中期/長期
-    owner: Optional[str] = None  # 責任單位
-    verification: Optional[str] = None  # 如何驗證完成
+    owner: str | None = None  # 責任單位
+    verification: str | None = None  # 如何驗證完成
 
     def to_bullet(self) -> str:
         """轉為投影片 bullet 格式"""

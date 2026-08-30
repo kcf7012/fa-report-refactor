@@ -1,10 +1,11 @@
 """新 3 個 Improvers 測試(Phase 4.5)"""
 
 import pytest
+from pptx import Presentation
+
 from fa_improver.improvers.analysis_method import add_analysis_method_slide
 from fa_improver.improvers.evidence_checklist import add_evidence_checklist_slide
 from fa_improver.improvers.problem_definition import add_problem_definition_slide
-from pptx import Presentation
 
 
 class TestProblemDefinitionImprover:

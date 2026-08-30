@@ -1,6 +1,7 @@
 """評估解析器測試"""
 
 import pytest
+
 from fa_improver.domain.evaluation import Dimension, GapSeverity
 from fa_improver.parsers.evaluation_parser import EvaluationParser
 

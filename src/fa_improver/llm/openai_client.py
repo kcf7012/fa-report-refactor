@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 from .base import LLMAuthError, LLMError, LLMRateLimitError, LLMResponse, LLMTimeoutError
 
@@ -28,9 +28,9 @@ class OpenAIClient:
         client = OpenAIClient()  # 自動讀取
     """
 
-    api_key: Optional[str] = None
+    api_key: str | None = None
     model: str = "gpt-4o-mini"
-    base_url: Optional[str] = None  # 自訂 endpoint(用於相容 API)
+    base_url: str | None = None  # 自訂 endpoint(用於相容 API)
     timeout: float = 60.0  # 秒
     max_retries: int = 3
 
@@ -65,7 +65,9 @@ class OpenAIClient:
         key = os.environ.get("OPENAI_API_KEY")
         if not key:
             raise LLMAuthError(
-                "找不到 OpenAI API key。" "請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，" "或在初始化時傳入 api_key。"
+                "找不到 OpenAI API key。"
+                "請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，"
+                "或在初始化時傳入 api_key。"
             )
         return key
 
@@ -112,7 +114,7 @@ class OpenAIClient:
             kwargs["response_format"] = {"type": "json_object"}
 
         # 重試邏輯
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(self.max_retries):
             try:
                 response = client.chat.completions.create(**kwargs)

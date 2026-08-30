@@ -35,7 +35,8 @@ def main():
         help="輸入 pptx 報告路徑(預設自動搜尋專案 report/ 目錄)",
     )
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="/tmp/llm_improved.pptx",
         help="輸出 pptx 路徑",
     )
@@ -52,7 +53,7 @@ def main():
     env_path = ROOT / ".env"
     if env_path.exists():
         load_dotenv(env_path)
-        print(f"✓ 已載入 .env")
+        print("✓ 已載入 .env")
     else:
         print(f"⚠️  .env 不存在於 {env_path}")
 
@@ -84,7 +85,7 @@ def main():
             report_path = original_reports[0]
             print(f"⚠️  預設報告不存在,使用: {report_path.name}")
         else:
-            print(f"✗ report/ 目錄無原始 pptx 檔案")
+            print("✗ report/ 目錄無原始 pptx 檔案")
             return 1
     print(f"✓ 報告: {report_path}")
     print(f"  檔案大小: {report_path.stat().st_size / 1024:.1f} KB")
@@ -112,20 +113,14 @@ def main():
     evaluator = LLMEvaluator(client)
     evaluation = evaluator.evaluate_pptx(report_path)
 
-    print(f"✓ LLM 評估完成!")
+    print("✓ LLM 評估完成!")
     print(f"  總分: {evaluation.total_score}")
     print(f"  等級: {evaluation.grade}")
     print()
-    print(f"  6 維度評分:")
+    print("  6 維度評分:")
     for dim in evaluation.dimensions:
         gap_marker = (
-            "🔴"
-            if dim.score < 50
-            else "🟠"
-            if dim.score < 70
-            else "🟡"
-            if dim.score < 85
-            else "🟢"
+            "🔴" if dim.score < 50 else "🟠" if dim.score < 70 else "🟡" if dim.score < 85 else "🟢"
         )
         print(f"    {gap_marker} {dim.name.value}: {dim.score}/100")
     print()
@@ -136,7 +131,7 @@ def main():
         in_tok = usage.get("prompt_tokens", 0)
         out_tok = usage.get("completion_tokens", 0)
         total_tok = usage.get("total_tokens", 0)
-        print(f"  Token 使用:")
+        print("  Token 使用:")
         print(f"    - Prompt: {in_tok}")
         print(f"    - Completion: {out_tok}")
         print(f"    - Total: {total_tok}")
@@ -179,7 +174,7 @@ def main():
 
     result = orchestrator.execute(prs, output_path)
 
-    print(f"✓ 改善完成!")
+    print("✓ 改善完成!")
     print(f"  投影片: {original_count} → {result.final_slide_count} 張")
     print(f"  母片保護: {'✓' if result.master_preserved else '✗ 失敗!'}")
     print(f"  輸出: {result.output_path}")
@@ -199,7 +194,7 @@ def main():
     print()
     print("✓ 端對端測試完成!您可以在 OpenAI Dashboard 查看實際用量。")
     print()
-    print(f"  Dashboard: https://platform.openai.com/usage")
+    print("  Dashboard: https://platform.openai.com/usage")
 
     return 0
 

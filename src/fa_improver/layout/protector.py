@@ -22,7 +22,9 @@ class MasterSnapshot:
         if self.masters_xml != other.masters_xml:
             violations.append("母片 XML 被修改")
         if self.layouts_xml != other.layouts_xml:
-            violations.append(f"Layout XML 被修改({len(self.layouts_xml)} → {len(other.layouts_xml)})")
+            violations.append(
+                f"Layout XML 被修改({len(self.layouts_xml)} → {len(other.layouts_xml)})"
+            )
         if self.layout_names != other.layout_names:
             violations.append(
                 f"Layout 數量/名稱變更:{len(self.layout_names)} → {len(other.layout_names)}"

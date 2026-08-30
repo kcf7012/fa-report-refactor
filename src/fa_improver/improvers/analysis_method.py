@@ -9,8 +9,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pptx import Presentation
 from pptx.util import Inches
 
@@ -29,7 +27,7 @@ from ..visuals import (
 def add_analysis_method_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
-    dimension: Optional[DimensionScore] = None,
+    dimension: DimensionScore | None = None,
 ) -> None:
     """新增分析方法與流程投影片
 

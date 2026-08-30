@@ -130,7 +130,9 @@ def _run(args) -> int:
 
     print("\n✅ 完成!")
     print(f"   輸出:{result.output_path}")
-    print(f"   投影片:{1 if False else ''}{result.original_slide_count} → {result.final_slide_count}")
+    print(
+        f"   投影片:{1 if False else ''}{result.original_slide_count} → {result.final_slide_count}"
+    )
     print(f"   母片保護:{'✓' if result.master_preserved else '✗'}")
     print(f"   耗時:{result.duration_seconds:.1f}s")
 

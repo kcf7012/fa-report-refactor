@@ -5,7 +5,6 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 class PPTConverter:
@@ -17,7 +16,7 @@ class PPTConverter:
     def __init__(self):
         self.temp_files: list[Path] = []
 
-    def convert_if_needed(self, file_path: Path) -> Optional[Path]:
+    def convert_if_needed(self, file_path: Path) -> Path | None:
         """若輸入是 .ppt,自動轉換為 .pptx;.pptx 則直接返回"""
         file_ext = file_path.suffix.lower()
 
@@ -30,7 +29,7 @@ class PPTConverter:
         # 其他副檔名:嘗試以 pptx 處理(可能會失敗,讓上層處理)
         return file_path
 
-    def convert_ppt_to_pptx(self, ppt_path: Path) -> Optional[Path]:
+    def convert_ppt_to_pptx(self, ppt_path: Path) -> Path | None:
         """嘗試將 .ppt 轉換為 .pptx"""
         pptx_path = ppt_path.with_suffix(".pptx")
 
@@ -49,7 +48,7 @@ class PPTConverter:
 
         return None
 
-    def _try_libreoffice(self, ppt_path: Path) -> Optional[Path]:
+    def _try_libreoffice(self, ppt_path: Path) -> Path | None:
         """使用 LibreOffice 轉換"""
         libreoffice_paths = [
             "libreoffice",
@@ -91,7 +90,7 @@ class PPTConverter:
 
         return None
 
-    def _try_pywin32(self, ppt_path: Path) -> Optional[Path]:
+    def _try_pywin32(self, ppt_path: Path) -> Path | None:
         """使用 pywin32(Windows)"""
         try:
             import win32com.client

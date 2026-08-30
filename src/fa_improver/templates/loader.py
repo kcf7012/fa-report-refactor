@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from ..domain.template import (
     BUILTIN_TEMPLATES,
@@ -25,7 +24,7 @@ class TemplateLoader:
     3. 樣板繼承(基於內建樣板覆寫部分欄位)
     """
 
-    def __init__(self, custom_template_dir: Optional[Path] = None):
+    def __init__(self, custom_template_dir: Path | None = None):
         self.custom_template_dir = custom_template_dir
 
     def load(self, name: str) -> SlideTemplate:
@@ -46,7 +45,7 @@ class TemplateLoader:
             + (f"\n自訂目錄: {self.custom_template_dir}" if self.custom_template_dir else "")
         )
 
-    def _try_load_custom(self, name: str) -> Optional[SlideTemplate]:
+    def _try_load_custom(self, name: str) -> SlideTemplate | None:
         """嘗試從自訂目錄載入 JSON"""
         if not self.custom_template_dir:
             return None
@@ -137,6 +136,6 @@ class TemplateLoader:
         return sorted(names)
 
 
-def load_template(name: str, custom_dir: Optional[Path] = None) -> SlideTemplate:
+def load_template(name: str, custom_dir: Path | None = None) -> SlideTemplate:
     """便利函式:載入樣板"""
     return TemplateLoader(custom_dir).load(name)

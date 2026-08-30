@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class Dimension(str, Enum):
@@ -135,7 +134,7 @@ class ReportContext:
     gaps: dict[Dimension, GapSeverity] = field(default_factory=dict)
 
     # 評估結果(可選)
-    evaluation: Optional[EvaluationResult] = None
+    evaluation: EvaluationResult | None = None
 
     def gap_for(self, dim: Dimension) -> GapSeverity:
         return self.gaps.get(dim, GapSeverity.NONE)

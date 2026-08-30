@@ -86,12 +86,12 @@ def main():
         # 4. 顯示結果
         print("✓ API 呼叫成功!")
         print(f"  模型:{response.model}")
-        print(f"  Token 使用:")
+        print("  Token 使用:")
         print(f"    - prompt: {response.usage.prompt_tokens}")
         print(f"    - completion: {response.usage.completion_tokens}")
         print(f"    - total: {response.usage.total_tokens}")
         print()
-        print(f"  回應內容:")
+        print("  回應內容:")
         print(f"    {response.choices[0].message.content}")
         print()
 

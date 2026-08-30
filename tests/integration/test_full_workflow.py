@@ -3,9 +3,10 @@
 from pathlib import Path
 
 import pytest
+from pptx import Presentation
+
 from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 from fa_improver.parsers.evaluation_parser import parse_evaluation
-from pptx import Presentation
 
 
 class TestFullWorkflow:

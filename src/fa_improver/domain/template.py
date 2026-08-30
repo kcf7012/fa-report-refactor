@@ -91,7 +91,8 @@ class SlideTemplate:
             raise TemplateValidationError(f"Template '{self.name}' 沒有任何 sections。")
         if len(self.sections) > 5:
             raise TemplateValidationError(
-                f"Template '{self.name}' 有 {len(self.sections)} 個 sections,超過 5。" f"請拆分為多個樣板。"
+                f"Template '{self.name}' 有 {len(self.sections)} 個 sections,超過 5。"
+                f"請拆分為多個樣板。"
             )
         if self.max_total_words > 300:
             raise TemplateValidationError(
