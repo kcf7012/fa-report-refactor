@@ -38,7 +38,7 @@ class TestOpenAIClientAuth:
     def test_missing_api_key_raises(self, monkeypatch):
         """缺少 API key 應拋出 LLMAuthError"""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-        client = OpenAIClient()
+        client = OpenAIClient(skip_dotenv=True)
         with pytest.raises(LLMAuthError, match="找不到"):
             client._get_api_key()
 

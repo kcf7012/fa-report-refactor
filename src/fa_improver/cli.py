@@ -76,6 +76,20 @@ def _run(args) -> int:
         print(f"✗ 找不到輸入檔:{input_path}")
         return 1
 
+    # 自動轉換 .ppt → .pptx
+    from .utils.ppt_converter import PPTConverter
+
+    converter = PPTConverter()
+    converted_path = converter.convert_if_needed(input_path)
+
+    if converted_path is None:
+        print(f"✗ 無法處理輸入檔案(可能不是有效的 PowerPoint 檔案)")
+        return 1
+
+    actual_input = converted_path
+    if converted_path != input_path:
+        print(f"✓ 已將 {input_path.suffix} 轉換為 .pptx")
+
     # 解析評估結果
     print("📖 解析評估...")
     if args.eval:
@@ -86,7 +100,7 @@ def _run(args) -> int:
         evaluation = parse_evaluation(eval_path)
         print(f"   來源:{eval_path.suffix} 檔案")
     elif args.llm_provider:
-        evaluation = _evaluate_with_llm(input_path, args)
+        evaluation = _evaluate_with_llm(actual_input, args)
     else:
         print("✗ 必須指定 --eval 或 --llm-provider")
         return 1
@@ -94,13 +108,13 @@ def _run(args) -> int:
     print(f"   總分:{evaluation.total_score} ({evaluation.grade})")
 
     # 載入 pptx
-    print(f"📊 載入簡報:{input_path}")
-    prs = Presentation(input_path)
+    print(f"📊 載入簡報:{actual_input}")
+    prs = Presentation(actual_input)
     print(f"   投影片數:{len(prs.slides)}")
 
     # 執行改善
     print(f"🔧 執行改善...")
-    orchestrator = ImprovementOrchestrator(evaluation, input_path)
+    orchestrator = ImprovementOrchestrator(evaluation, actual_input)
 
     # 如果有自訂樣板目錄,傳入 TemplateLoader
     if args.template_dir:

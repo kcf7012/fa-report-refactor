@@ -40,6 +40,8 @@ class OpenAIClient:
     total_input_tokens: int = 0
     total_output_tokens: int = 0
 
+    skip_dotenv: bool = False  # 測試用:跳過 .env 載入
+
     # 客戶端延遲初始化(避免 import 失敗時整個套件掛掉)
     _client: Any = field(default=None, init=False, repr=False)
 
@@ -48,17 +50,18 @@ class OpenAIClient:
         if self.api_key:
             return self.api_key
 
-        # 嘗試從 .env 載入(同時搜尋當前目錄與上層)
-        try:
-            from dotenv import find_dotenv, load_dotenv
+        # 嘗試從 .env 載入(除非明確跳過,例如測試)
+        if not self.skip_dotenv:
+            try:
+                from dotenv import find_dotenv, load_dotenv
 
-            dotenv_path = find_dotenv(usecwd=True)
-            if dotenv_path:
-                load_dotenv(dotenv_path=dotenv_path)
-            else:
-                load_dotenv()  # fallback
-        except ImportError:
-            pass  # python-dotenv 未安裝,跳過
+                dotenv_path = find_dotenv(usecwd=True)
+                if dotenv_path:
+                    load_dotenv(dotenv_path=dotenv_path)
+                else:
+                    load_dotenv()  # fallback
+            except ImportError:
+                pass  # python-dotenv 未安裝,跳過
 
         key = os.environ.get("OPENAI_API_KEY")
         if not key:

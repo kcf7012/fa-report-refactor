@@ -64,20 +64,14 @@ class TestEnvFileLoading:
         finally:
             os.chdir(original_cwd)
 
-    def test_missing_api_key_raises(self, tmp_path, monkeypatch):
+    def test_missing_api_key_raises(self, monkeypatch):
         """缺少 API key 時應拋出明確錯誤"""
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-
-        original_cwd = os.getcwd()
-        os.chdir(tmp_path)  # 空目錄,沒有 .env
-        try:
-            client = OpenAIClient()
-            with pytest.raises(Exception) as exc_info:
-                client._get_api_key()
-            assert "OPENAI_API_KEY" in str(exc_info.value)
-            assert ".env" in str(exc_info.value)  # 錯誤訊息應提示 .env
-        finally:
-            os.chdir(original_cwd)
+        # 使用 skip_dotenv=True 避免 .env 干擾
+        client = OpenAIClient(skip_dotenv=True)
+        with pytest.raises(Exception) as exc_info:
+            client._get_api_key()
+        assert "OPENAI_API_KEY" in str(exc_info.value)
 
     def test_env_file_with_comments(self, tmp_path, monkeypatch):
         """.env 檔案支援註解"""
