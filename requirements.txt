@@ -1,8 +1,18 @@
 # FA Report Improvement Skill - Python Dependencies
 
+# 註:v3.0.1 起主要依賴管理已遷移至 pyproject.toml
+# 本檔保留為 pip 使用者 fallback,請優先使用:
+#   uv sync          # uv 使用者(自動管理 .venv/)
+#   pip install -e ".[dev,llm]"  # pip 使用者
+
 # Core Requirements (必需)
 python-pptx>=0.6.21      # PowerPoint processing
 Pillow>=9.0.0           # Image processing (python-pptx dependency)
+pydantic>=2.0            # Data validation
+python-dotenv>=1.0       # .env loading
+
+# Optional Requirements (可選 - 用於 LLM 整合)
+# openai>=1.0           # OpenAI API(install via: pip install -e ".[llm]")
 
 # Optional Requirements (可選 - 用於 PPT 轉換)
 

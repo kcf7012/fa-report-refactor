@@ -43,7 +43,7 @@ repos:
   - repo: local
     hooks:
       - id: pytest
-        name: pytest(母片保護 + 89 測試)
+        name: pytest(母片保護 + 105 測試)
         entry: .venv/bin/python -m pytest tests/ -q --tb=short
         language: system
         types: [python]

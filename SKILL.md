@@ -1,7 +1,7 @@
 ---
 name: fa-report-improvement
 description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. v3.0 features modular architecture covering all 6 evaluation dimensions (100% trigger coverage), PPT/PPTX input support, JSON/TXT evaluation parsing, LLM integration (OpenAI-compatible), and 5 visual element generators. Master slide protection guaranteed through snapshot verification.
-version: 3.0.0
+version: 3.0.1
 entrypoint: src/fa_improver/__main__.py
 inputs:
   - id: report
@@ -36,7 +36,7 @@ inputs:
 | 視覺元素 | 純文字 | 5 種生成器 |
 | LLM 整合 | ❌ | ✅ OpenAI / 相容 API |
 | 環境變數 | ❌ | ✅ .env 自動載入 |
-| 測試覆蓋 | 0 | **89 個** |
+| 測試覆蓋 | 0 | **105 個** |
 | PPT 輸入 | 手動 | 自動轉換 |
 
 ## 🚀 快速開始
@@ -89,10 +89,10 @@ src/fa_improver/         ← 主程式碼
 
 ```bash
 # 跑測試
-pytest tests/
+.venv/bin/python -m pytest tests/
 
 # Lint
-ruff check src/
+.venv/bin/python -m ruff check src/
 
 # 端對端測試
 python test_api_key.py         # 驗證 API key
