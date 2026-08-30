@@ -1,0 +1,51 @@
+# Pre-commit hooks for fa-improver
+# 安裝: pip install pre-commit && pre-commit install
+# 手動執行: pre-commit run --all-files
+
+repos:
+  # Python 程式碼格式與 lint
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      # Lint 檢查(快速)
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+      # 格式化
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  # Black 格式化(備援,與 ruff-format 二擇一即可)
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        types_or: [python]
+
+  # 基本檔案檢查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        types_or: [python, markdown, yaml, json]
+      - id: end-of-file-fixer
+        types_or: [python, markdown, yaml, json]
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # pytest 必須通過(母片保護 + 89 個測試)
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest(母片保護 + 89 測試)
+        entry: .venv/bin/python -m pytest tests/ -q --tb=short
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
