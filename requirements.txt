@@ -1,0 +1,20 @@
+# FA Report Improvement Skill - Python Dependencies
+
+# Core Requirements (必需)
+python-pptx>=0.6.21      # PowerPoint processing
+Pillow>=9.0.0           # Image processing (python-pptx dependency)
+
+# Optional Requirements (可選 - 用於 PPT 轉換)
+
+# Windows PPT Conversion (Windows 用戶推薦)
+pywin32>=305; sys_platform == 'win32'  # PowerPoint COM automation
+
+# Note: LibreOffice is required for cross-platform conversion
+# Linux: sudo apt install libreoffice
+# macOS: Download from https://www.libreoffice.org/
+# Windows: Download from https://www.libreoffice.org/ (alternative to PowerPoint)
+
+# Development/Testing (開發用 - 可選)
+# pytest>=7.0.0         # For running tests
+# black>=22.0.0         # Code formatting
+# flake8>=4.0.0         # Code linting
