@@ -15,7 +15,9 @@ sys.path.insert(0, str(SKILL_ROOT / "src"))
 def main():
     if len(sys.argv) != 4:
         print("使用方法: python improve_fa_report.py <input.pptx> <eval.json> <output.pptx>")
-        print("或使用新 CLI: python -m fa_improver <input.pptx> --eval <eval.json> --output <output.pptx>")
+        print(
+            "或使用新 CLI: python -m fa_improver <input.pptx> --eval <eval.json> --output <output.pptx>"
+        )
         sys.exit(1)
 
     # 將位置參數轉為新 CLI 的命名參數

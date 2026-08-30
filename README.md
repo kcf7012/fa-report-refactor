@@ -4,7 +4,9 @@
 
 ## 版本
 
-**v3.0.0** — 模組化架構,6 維度完整覆蓋,LLM 整合
+**v3.0.1** — 模組化架構,6 維度完整覆蓋,LLM 整合 + pre-commit / uv lock / 13 個新測試
+
+> 更新紀錄見 [CHANGELOG.md](CHANGELOG.md)
 
 ## 快速開始
 
@@ -14,7 +16,8 @@
 # 方式 A:使用 uv(推薦)
 uv sync
 
-# 方式 B:使用既有 venv
+# 方式 B:使用既有 .venv
+python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev,llm]"
 ```
 
@@ -51,6 +54,71 @@ python -m fa_improver report.pptx \
   --output improved.pptx
 ```
 
+### 4. 執行方式選擇
+
+技能包提供 **3 種執行方式**(+ 1 種安裝後的系統指令):
+
+| # | 方式 | 指令 | 適用情境 |
+|---|------|------|---------|
+| **1** | **新 CLI**(推薦) | `python -m fa_improver ...` | 日常使用、CI/CD |
+| **2** | **傳統腳本** | `python scripts/improve_fa_report.py ...` | 向後相容舊版指令 |
+| **3** | **端對端測試** | `python test_llm_end_to_end.py` | 開發測試、展示 |
+| 4 | **系統指令** (需 `pip install -e .`) | `fa-improve ...` | 任何目錄、全域使用 |
+
+#### 方式 1: `python -m fa_improver` (新 CLI · 推薦)
+
+完整 argparse 介面、所有選項:
+
+```bash
+cd .agents/skills/fa-report-improvement
+PYTHONPATH=src python -m fa_improver input.pptx \
+    --eval eval.json \
+    --output improved.pptx
+```
+
+#### 方式 2: `scripts/improve_fa_report.py` (傳統 CLI · 向後相容)
+
+簡單位置參數,舊版用戶無需改指令:
+
+```bash
+python scripts/improve_fa_report.py input.pptx eval.json output.pptx
+```
+
+內部會自動委派為新 CLI 的命名參數(`--eval` / `--output`)。
+
+#### 方式 3: 端對端測試程式
+
+自動評估+改善+成本報告,適合開發測試與展示:
+
+```bash
+# 完整 LLM 評估 + 改善流程
+python test_llm_end_to_end.py
+
+# 指定報告
+python test_llm_end_to_end.py /path/to/report.pptx
+
+# 只驗證 API key
+python test_api_key.py
+```
+
+#### 方式 4: 系統層級指令 `fa-improve` (安裝後)
+
+安裝套件後,任何目錄都可以呼叫:
+
+```bash
+pip install -e .
+fa-improve /path/to/report.pptx --eval /path/to/eval.json --output /path/to/output.pptx
+```
+
+#### 執行方式選擇指南
+
+| 情境 | 推薦方式 |
+|------|---------|
+| 日常使用 | 方式 1 (`python -m fa_improver`) |
+| 舊版指令相容 | 方式 2 (傳統腳本) |
+| 開發/展示 | 方式 3 (端對端測試) |
+| 系統整合 | 方式 4 (`fa-improve`) |
+
 ## 輸入格式
 
 | 副檔名 | 說明 |
@@ -74,14 +142,22 @@ python -m fa_improver report.pptx \
 ## 開發
 
 ```bash
-# 跑測試
-pytest tests/
+# 跑測試(105 個,含 .ppt 轉換、母片保護、LLM、樣板、視覺元素)
+.venv/bin/python -m pytest tests/ -q
 
 # 跑特定測試
-pytest tests/unit/test_visual_generators.py -v
+.venv/bin/python -m pytest tests/unit/test_visual_generators.py -v
+
+# 完整測試含覆蓋率
+.venv/bin/python -m pytest tests/ --cov=fa_improver --cov-report=term-missing
 
 # Lint
 ruff check src/
+
+# Pre-commit hooks(安裝一次,之後自動跑)
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
 
 # 端對端測試(需要 .env)
 python test_api_key.py
@@ -96,14 +172,22 @@ src/fa_improver/      # 主程式碼(35 模組)
 ├── parsers/           # 輸入解析
 ├── layout/            # 母片保護
 ├── improvers/         # 8 種改善動作
-├── templates/         # JSON 樣板
+├── templates/         # JSON 樣板(8 個內建)
 ├── visuals/           # 5 種視覺元素
 ├── llm/               # LLM Client
 └── utils/             # 工具(PPT 轉換)
 
-tests/                 # 89 個測試
+tests/                 # 105 個測試(102 passed + 3 skipped)
+├── unit/              # 11 個單元測試模組
+└── integration/       # 端對端測試
+
 examples/              # 自訂樣板範例
 references/            # 領域知識文件
+
+# 設定檔
+pyproject.toml         # 專案設定 + pytest + ruff + mypy + black
+uv.lock                # 依賴鎖定(51 套件)
+.pre-commit-config.yaml  # Git hooks(ruff / black / pytest)
 ```
 
 ## 授權

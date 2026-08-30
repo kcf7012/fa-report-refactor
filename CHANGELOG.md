@@ -178,6 +178,47 @@ cp .env.example .env
 
 ---
 
+## [3.0.1] - 2026-01-15
+
+### ✨ 新增(開發者體驗)
+
+#### Pre-commit + uv + 測試覆蓋強化
+- **`.pre-commit-config.yaml`** — Git hooks 設定檔,含 4 大類:
+  - `ruff` + `ruff-format` + `black`(格式化與 lint)
+  - `pre-commit-hooks`(trailing-whitespace / check-yaml / check-json / detect-private-key 等)
+  - `pytest` hook(母片保護 + 89 個測試自動驗證)
+- **`uv.lock`** — 鎖定 51 個依賴套件,確保環境可重現(343 KB)
+- **`tests/unit/test_ppt_converter.py`** — 新增 13 個 .ppt 轉換測試,涵蓋:
+  - 副檔名判斷(.pptx 直通 / .ppt 轉換 / 大小寫不敏感 / 未知副檔名)
+  - LibreOffice 整合(timeout / 找不到指令 / 非零退出碼)
+  - cleanup 機制(刪除 tracked files / 處理已被刪除 / 權限錯誤 / 空列表)
+- **`docs/05_api_reference.md`** — 完整 API 文件(35 模組 × 公開 API)
+
+### 🔧 變更
+
+- **`scripts/install.py`** — 從建議手動 `venv/` 改為推薦 `uv sync`(建立 `.venv/`)
+- **`.pre-commit-config.yaml`** pytest hook entry:`venv/bin/python` → `.venv/bin/python`
+- **移除舊 `venv/` 目錄**(106 MB 回收,統一用 uv-managed `.venv/`)
+- **`docs/USER_GUIDE.md`** § 1.2 新增「執行方式選擇」對照表 + § 2.4 新增「執行方式詳細指令」(4 種方式)
+- **`.agents/skills/fa-report-improvement/README.md`** 新增「4. 執行方式選擇」章節,與 USER_GUIDE 同步
+- **`.agents/skills/handoff-doc-generator/`** — 新技能包,自動產生 8 大區塊交接文檔
+
+### 📊 測試數據
+
+| 指標 | v3.0.0 | v3.0.1 | 進步 |
+|------|--------|--------|------|
+| 測試通過 | 92(89 + 3 skipped) | **105**(102 + 3 skipped) | **+13** |
+| 覆蓋率 | 83% | **85%** | **+2%** |
+| `ppt_converter.py` 覆蓋 | 0% | 64% | +64% |
+
+### 📚 文件
+
+- 新增 `docs/handoff/2026-01-15-complete-phase5-todos-handoff.md`(本次任務交接)
+- 新增 `docs/handoff/2026-08-31-rename-root-dir-handoff.md`(從根目錄 HANDOFF.md 搬入歸檔)
+- 新增 `docs/handoff/2026-01-15-docs-3-exec-modes-handoff.md`(3 種執行方式文件交接)
+
+---
+
 ## 版本規範
 
 - **Major (X.0.0)**:不相容的 API 變更
