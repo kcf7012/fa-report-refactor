@@ -1,0 +1,35 @@
+{
+  "name": "executive_summary",
+  "title": "Summary 報告總結",
+  "layout_name": "Topic",
+  "description": "保留原 Summary + 強化 Executive Summary 與 Key Improvements",
+  "max_total_words": 250,
+  "primary_visual": "summary_card",
+  "color_theme": "primary",
+  "sections": [
+    {
+      "heading": "原 Summary 內容",
+      "visual": "bullet_list",
+      "max_bullets": 5,
+      "max_words_per_bullet": 30
+    },
+    {
+      "heading": "分析優點與成功驗證",
+      "visual": "checklist",
+      "max_bullets": 5,
+      "max_words_per_bullet": 30
+    },
+    {
+      "heading": "Executive Summary",
+      "visual": "summary_card",
+      "max_bullets": 1,
+      "max_words_per_bullet": 100
+    },
+    {
+      "heading": "Key Improvements Required",
+      "visual": "checklist",
+      "max_bullets": 5,
+      "max_words_per_bullet": 30
+    }
+  ]
+}

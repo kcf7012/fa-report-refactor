@@ -1,0 +1,33 @@
+{
+  "name": "analysis_method",
+  "title": "分析方法與流程",
+  "layout_name": "2L - Topic",
+  "description": "新增「分析方法與流程」維度的改善內容(8D 流程、分析方法對照)",
+  "max_total_words": 180,
+  "primary_visual": "checklist",
+  "color_theme": "accent",
+  "sections": [
+    {
+      "heading": "8D 流程檢查清單",
+      "visual": "checklist",
+      "max_bullets": 8,
+      "max_words_per_bullet": 20,
+      "placeholder_items": [
+        "D1: 建立團隊",
+        "D2: 描述問題",
+        "D3: 圍堵行動",
+        "D4: 根因分析",
+        "D5: 永久對策",
+        "D6: 實施與驗證",
+        "D7: 再發防止",
+        "D8: 團隊表揚"
+      ]
+    },
+    {
+      "heading": "分析方法對照表",
+      "visual": "comparison_table",
+      "max_bullets": 4,
+      "max_words_per_bullet": 25
+    }
+  ]
+}

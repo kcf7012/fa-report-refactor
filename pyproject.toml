@@ -1,0 +1,67 @@
+[project]
+name = "fa-improver"
+version = "3.0.0"
+description = "半導體 FA 報告智慧化改善工具"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Kenny Kang", email = "kenny.kang@elan.com.tw" },
+]
+keywords = ["semiconductor", "failure-analysis", "pptx", "llm-agent"]
+
+# 核心依賴(執行必要)
+dependencies = [
+    "python-pptx>=0.6.21",
+    "Pillow>=9.0.0",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0",  # .env 支援
+]
+
+# 選擇性依賴
+[project.optional-dependencies]
+llm = [
+    "openai>=1.0",
+]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "mypy>=1.7",
+    "ruff>=0.1",
+    "black>=23.10",
+    "pre-commit>=3.5",
+    "types-Pillow",
+]
+
+# CLI 入口
+[project.scripts]
+fa-improve = "fa_improver.cli:main"
+
+# ============================================
+# 工具設定
+# ============================================
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM"]
+ignore = ["E501"]  # line-too-long(交給 black)
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests["]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=fa_improver --cov-report=term-missing"

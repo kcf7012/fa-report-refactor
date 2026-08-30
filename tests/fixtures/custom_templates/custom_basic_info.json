@@ -1,0 +1,18 @@
+{
+  "extends": "basic_info",
+  "title": "FA 基本資訊(客製版)",
+  "description": "自訂的 FA 基本資訊樣板",
+  "sections": [
+    {
+      "heading": "自訂標題",
+      "visual": "checklist",
+      "max_bullets": 3,
+      "max_words_per_bullet": 20,
+      "placeholder_items": [
+        "項目 A",
+        "項目 B",
+        "項目 C"
+      ]
+    }
+  ]
+}

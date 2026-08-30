@@ -1,0 +1,12 @@
+"""ELAN 品牌色"""
+
+from pptx.dml.color import RGBColor
+
+# ELAN 主色系
+ELAN_BLUE = RGBColor(0x1F, 0x4E, 0x79)  # 深藍(主品牌色)
+ELAN_LIGHT_BLUE = RGBColor(0x5B, 0x9B, 0xD5)  # 淺藍(輔助色)
+ELAN_RED = RGBColor(0xC0, 0x00, 0x00)  # 紅(警告)
+ELAN_GREEN = RGBColor(0x70, 0xAD, 0x47)  # 綠(成功)
+ELAN_ORANGE = RGBColor(0xED, 0x7D, 0x31)  # 橘(注意)
+ELAN_GRAY = RGBColor(0x80, 0x80, 0x80)  # 灰(中性)
+ELAN_LIGHT_GRAY = RGBColor(0xD9, 0xD9, 0xD9)  # 淺灰(背景)

@@ -1,23 +1,49 @@
+# ============================================
+# FA Report Improvement Skill - .gitignore
+# ============================================
+
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
 *.egg-info/
+.installed.cfg
+.eggs/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
 
 # Virtual Environment
 venv/
 env/
 .venv/
+ENV/
 
 # IDE
 .vscode/
 .idea/
 *.swp
-
-# OS
+*.swo
 .DS_Store
 Thumbs.db
 
-# Temporary files
+# OS
+*~
 *.tmp
 *.bak
+
+# 環境變數(包含 API key)
+.env
+.env.*
+!.env.example
+
+# 工具產生的暫存檔
+.mypy_cache/
+.ruff_cache/
+
+# WSL metadata
+*:Zone.Identifier

@@ -1,0 +1,28 @@
+{
+  "name": "root_cause_statistical",
+  "title": "根因驗證及統計分析",
+  "layout_name": "2L - Topic",
+  "description": "統計驗證方法:對照組設計與 t-test",
+  "max_total_words": 180,
+  "primary_visual": "checklist",
+  "color_theme": "primary",
+  "sections": [
+    {
+      "heading": "針對問題點之深度分析建議",
+      "visual": "bullet_list",
+      "max_bullets": 4,
+      "max_words_per_bullet": 30
+    },
+    {
+      "heading": "建議執行動作",
+      "visual": "checklist",
+      "max_bullets": 3,
+      "max_words_per_bullet": 30,
+      "placeholder_items": [
+        "設定 DVT 正常品 vs PVT 異常品之對照組",
+        "使用獨立樣本 t 檢定驗證參數顯著性 (p < 0.05)",
+        "確保統計證據支持最終提到的根本原因"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "extends": "prevention_overview",
+  "title": "ELAN 改善對策總覽",
+  "description": "客製版,加入公司專屬 SOP 編號與監測頻率",
+  "sections": [
+    {
+      "heading": "ELAN 改善對策項目",
+      "visual": "checklist",
+      "max_bullets": 4,
+      "max_words_per_bullet": 30,
+      "placeholder_items": [
+        "短期:補齊 FA 基本資訊(FAE 負責)",
+        "中期:建立 IQC SOP(編號:ELAN-QA-IQC-2026)",
+        "長期:導入 MES 系統自動監測失效比例",
+        "持續:每月失效案例分享會"
+      ]
+    },
+    {
+      "heading": "ELAN 標準化與監測計畫",
+      "visual": "checklist",
+      "max_bullets": 4,
+      "max_words_per_bullet": 30,
+      "placeholder_items": [
+        "建立入料檢驗 (IQC) SOP 與測試閾值",
+        "導入自動化監測設備於生產線",
+        "將此案例納入知識管理資料庫",
+        "每季失效趨勢 review 會議"
+      ]
+    }
+  ]
+}

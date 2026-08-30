@@ -1,0 +1,28 @@
+{
+  "name": "prevention_overview",
+  "title": "長期預防措施與改善對策",
+  "layout_name": "2L - Topic",
+  "description": "改善對策總覽 + 標準化與監測計畫",
+  "max_total_words": 180,
+  "primary_visual": "checklist",
+  "color_theme": "success",
+  "sections": [
+    {
+      "heading": "擬議改善對策項目",
+      "visual": "bullet_list",
+      "max_bullets": 3,
+      "max_words_per_bullet": 30
+    },
+    {
+      "heading": "標準化與監測計畫",
+      "visual": "checklist",
+      "max_bullets": 3,
+      "max_words_per_bullet": 30,
+      "placeholder_items": [
+        "建立入料檢驗 (IQC) SOP 與測試閾值",
+        "導入自動化監測設備於生產線",
+        "將此案例納入知識管理資料庫以利後續追蹤"
+      ]
+    }
+  ]
+}

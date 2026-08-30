@@ -1,0 +1,32 @@
+{
+  "name": "evidence_checklist",
+  "title": "數據與證據支持",
+  "layout_name": "2L - Topic",
+  "description": "新增「數據與證據支持」維度的改善內容(對照組數據、圖片品質、追溯性)",
+  "max_total_words": 180,
+  "primary_visual": "comparison_table",
+  "color_theme": "primary",
+  "sections": [
+    {
+      "heading": "對照組 vs 異常品數據",
+      "visual": "comparison_table",
+      "max_bullets": 6,
+      "max_words_per_bullet": 25
+    },
+    {
+      "heading": "圖片品質與數據追溯性檢查清單",
+      "visual": "checklist",
+      "max_bullets": 7,
+      "max_words_per_bullet": 30,
+      "placeholder_items": [
+        "圖片解析度 ≥ 1000x",
+        "對焦清晰,IC Marking 可辨識",
+        "含比例尺(scale bar)",
+        "異常點明確標註",
+        "對照組(Golden Sample)比較",
+        "數據來源追溯",
+        "統計顯著性支援"
+      ]
+    }
+  ]
+}

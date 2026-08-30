@@ -1,0 +1,29 @@
+{
+  "name": "root_cause_5why",
+  "title": "5-Why 根因推導",
+  "layout_name": "2L - Topic",
+  "description": "5-Why 推導流程圖,標示目前推導層級",
+  "max_total_words": 180,
+  "primary_visual": "flow_diagram",
+  "color_theme": "accent",
+  "sections": [
+    {
+      "heading": "為何「推測」不等於「分析」",
+      "visual": "comparison_table",
+      "max_bullets": 3,
+      "max_words_per_bullet": 25
+    },
+    {
+      "heading": "5-Why 推導流程",
+      "visual": "flow_diagram",
+      "max_bullets": 5,
+      "max_words_per_bullet": 20
+    },
+    {
+      "heading": "目前缺少的環節",
+      "visual": "checklist",
+      "max_bullets": 4,
+      "max_words_per_bullet": 30
+    }
+  ]
+}

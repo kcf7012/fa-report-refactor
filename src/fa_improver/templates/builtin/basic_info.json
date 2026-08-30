@@ -1,0 +1,32 @@
+{
+  "name": "basic_info",
+  "title": "FA 基本資訊",
+  "layout_name": "2L - Topic",
+  "description": "新增 FA 報告的基本資訊(編號、工程師、客戶、專案、日期等)",
+  "max_total_words": 150,
+  "primary_visual": "bullet_list",
+  "color_theme": "primary",
+  "sections": [
+    {
+      "heading": "基本資料",
+      "visual": "bullet_list",
+      "max_bullets": 7,
+      "max_words_per_bullet": 10,
+      "placeholder_items": [
+        "FA 編號: {fa_id}",
+        "負責工程師: ELAN FAE",
+        "客戶: {customer}",
+        "專案名稱: {project}",
+        "報告日期: {date}",
+        "失效數量: 依評核建議補充填寫",
+        "批號 (Lot No.): 依評核建議補充填寫"
+      ]
+    },
+    {
+      "heading": "優化建議項目",
+      "visual": "bullet_list",
+      "max_bullets": 3,
+      "max_words_per_bullet": 40
+    }
+  ]
+}
