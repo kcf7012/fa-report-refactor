@@ -117,7 +117,6 @@ class ImprovementOrchestrator:
 
         # 根因分析(嚴重度決定展開數量)
         gap = self.evaluation.gap(Dimension.ROOT_CAUSE)
-        score = self._score(Dimension.ROOT_CAUSE)
         if gap == GapSeverity.SEVERE:
             plan.add(SlideAction.ADD_ROOT_CAUSE_5_WHY)
             plan.add(SlideAction.ADD_ROOT_CAUSE_CONTROL_GROUP)

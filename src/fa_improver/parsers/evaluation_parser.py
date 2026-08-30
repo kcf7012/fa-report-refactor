@@ -57,7 +57,7 @@ class EvaluationParser:
         strengths = self._parse_section_bullets(content, r"報告優點")
 
         # 解析改進建議
-        improvements = self._parse_improvements_from_txt(content)
+        self._parse_improvements_from_txt(content)
 
         return EvaluationResult(
             total_score=total_score,
@@ -94,8 +94,7 @@ class EvaluationParser:
                 )
 
         # 解析改進建議
-        improvements = data.get("improvements", [])
-        parsed_improvements = [Improvement.from_dict(i) for i in improvements]
+        data.get("improvements", [])
 
         return EvaluationResult(
             total_score=float(data.get("total_score", 0)),

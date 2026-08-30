@@ -19,7 +19,7 @@ def find_content_layout(prs: Presentation) -> SlideLayout:
         name_lower = layout.name.lower()
         if "cover" in name_lower or "封面" in layout.name:
             continue
-        placeholder_count = len([s for s in layout.placeholders])
+        placeholder_count = len(list(layout.placeholders))
         if placeholder_count < 2:
             continue
 

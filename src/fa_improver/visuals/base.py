@@ -450,7 +450,7 @@ class TimelineGenerator(VisualGenerator):
     def _normalize(self, content: list) -> list[dict]:
         """標準化輸入"""
         result = []
-        for i, item in enumerate(content):
+        for _i, item in enumerate(content):
             if isinstance(item, str):
                 result.append({"label": item, "timeframe": "", "color": ELAN_BLUE})
             elif isinstance(item, dict):

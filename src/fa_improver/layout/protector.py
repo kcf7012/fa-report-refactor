@@ -22,9 +22,7 @@ class MasterSnapshot:
         if self.masters_xml != other.masters_xml:
             violations.append("母片 XML 被修改")
         if self.layouts_xml != other.layouts_xml:
-            violations.append(
-                f"Layout XML 被修改({len(self.layouts_xml)} → {len(other.layouts_xml)})"
-            )
+            violations.append(f"Layout XML 被修改({len(self.layouts_xml)} → {len(other.layouts_xml)})")
         if self.layout_names != other.layout_names:
             violations.append(
                 f"Layout 數量/名稱變更:{len(self.layout_names)} → {len(other.layout_names)}"
@@ -49,8 +47,8 @@ class MasterProtector:
         """擷取所有不可變狀態"""
         return MasterSnapshot(
             masters_xml=[m.element.xml for m in prs.slide_masters],
-            layouts_xml=[l.element.xml for l in prs.slide_layouts],
-            layout_names=[l.name for l in prs.slide_layouts],
+            layouts_xml=[lo.element.xml for lo in prs.slide_layouts],
+            layout_names=[lo.name for lo in prs.slide_layouts],
             image_count=self._count_master_images(prs),
         )
 
@@ -87,7 +85,7 @@ class MasterProtector:
         Raises:
             MasterProtectionError: layout 不存在
         """
-        existing_names = [l.name for l in prs.slide_layouts]
+        existing_names = [lo.name for lo in prs.slide_layouts]
         if layout_name not in existing_names:
             raise MasterProtectionError(
                 f"Layout '{layout_name}' 不存在!\n"

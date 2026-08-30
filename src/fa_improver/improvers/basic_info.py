@@ -81,13 +81,13 @@ def _get_or_create_body(slide):
 _Inches = Inches
 
 
-def _PT(size: int):
+def _PT(size: int):  # noqa: N802
     from pptx.util import Pt
 
     return Pt(size)
 
 
-def _COLOR(r: int, g: int, b: int):
+def _COLOR(r: int, g: int, b: int):  # noqa: N802
     from pptx.dml.color import RGBColor
 
     return RGBColor(r, g, b)

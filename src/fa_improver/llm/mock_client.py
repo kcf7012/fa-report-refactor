@@ -74,7 +74,6 @@ class MockLLMClient:
 
     def with_failing(self, error: Exception) -> MockLLMClient:
         """設定讓 client 拋出錯誤(用於錯誤處理測試)"""
-        original_complete = self.complete
 
         def failing_complete(*args, **kwargs):
             raise error

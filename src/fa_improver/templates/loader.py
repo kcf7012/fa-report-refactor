@@ -64,7 +64,7 @@ class TemplateLoader:
         try:
             data = json.loads(content)
         except json.JSONDecodeError as e:
-            raise TemplateValidationError(f"樣板 JSON 解析失敗:{e}")
+            raise TemplateValidationError(f"樣板 JSON 解析失敗:{e}") from e
 
         template = self._dict_to_template(data)
         template.validate()

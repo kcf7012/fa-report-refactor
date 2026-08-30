@@ -57,7 +57,7 @@ class TestMasterProtection:
         prs = Presentation(sample_pptx)
         protector = MasterProtector(prs)
 
-        existing_names = [l.name for l in prs.slide_layouts]
+        existing_names = [lo.name for lo in prs.slide_layouts]
 
         # 存在的 layout 應該可以
         if existing_names:

@@ -10,6 +10,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 # === 動態尋找專案根目錄(完全動態) ===
 _THIS_FILE = Path(__file__).resolve()
 _CURRENT = _THIS_FILE.parent
@@ -20,11 +22,9 @@ _candidate = _CURRENT
 while _candidate != _candidate.parent:
     _candidate = _candidate.parent
     _report_dir = _candidate / "report"
-    if _report_dir.is_dir():
-        # 確認裡面有 pptx 檔案
-        if any(_report_dir.glob("*.pptx")):
-            _PROJECT_ROOT = _candidate
-            break
+    if _report_dir.is_dir() and any(_report_dir.glob("*.pptx")):
+        _PROJECT_ROOT = _candidate
+        break
 
 if _PROJECT_ROOT is None:
     # 都找不到,使用當前目錄的祖父目錄作為最後 fallback
@@ -62,8 +62,6 @@ print(f"\n[conftest] SKILL_ROOT: {_SKILL_ROOT}")
 print(f"[conftest] PROJECT_ROOT: {_PROJECT_ROOT}")
 print(f"[conftest] .env exists: {_HAS_DOTENV}")
 print(f"[conftest] Available report files: {sum(len(v) for v in _REPORT_FILES.values())} 個\n")
-
-import pytest
 
 
 # === 自動 Skip 機制 ===

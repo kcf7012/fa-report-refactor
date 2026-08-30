@@ -14,7 +14,7 @@ class TestProblemDefinitionImprover:
     def test_add_slide_basic(self):
         """基本新增測試"""
         prs = Presentation()
-        slide = prs.slides.add_slide(prs.slide_layouts[1])
+        prs.slides.add_slide(prs.slide_layouts[1])
 
         from fa_improver.domain.evaluation import EvaluationResult
 

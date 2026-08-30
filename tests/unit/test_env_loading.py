@@ -135,8 +135,12 @@ class TestGitignoreProtection:
         gitignore = Path(__file__).parent.parent.parent / ".gitignore"
         content = gitignore.read_text(encoding="utf-8")
         # 應有 .env 規則
-        lines = [l.strip() for l in content.split("\n") if l.strip() and not l.startswith("#")]
-        env_rules = [l for l in lines if l.startswith(".env") or ".env" in l]
+        lines = [
+            line.strip()
+            for line in content.split("\n")
+            if line.strip() and not line.startswith("#")
+        ]
+        env_rules = [line for line in lines if line.startswith(".env") or ".env" in line]
         assert len(env_rules) > 0, ".env 應在 .gitignore 中排除"
         # .env.example 應明確不被排除
-        assert any("!.env.example" in l for l in env_rules), ".env.example 應保留不被忽略"
+        assert any("!.env.example" in line for line in env_rules), ".env.example 應保留不被忽略"

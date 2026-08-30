@@ -24,7 +24,7 @@ class TestBuiltinTemplates:
 
     def test_all_builtin_templates_valid(self):
         """所有內建樣板都應通過驗證"""
-        for name, template in BUILTIN_TEMPLATES.items():
+        for _name, template in BUILTIN_TEMPLATES.items():
             template.validate()  # 不應拋出
 
     def test_max_bullets_constraint(self):

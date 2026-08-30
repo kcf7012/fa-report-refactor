@@ -31,8 +31,6 @@ class PPTConverter:
 
     def convert_ppt_to_pptx(self, ppt_path: Path) -> Path | None:
         """嘗試將 .ppt 轉換為 .pptx"""
-        pptx_path = ppt_path.with_suffix(".pptx")
-
         # 方法 1: LibreOffice
         result = self._try_libreoffice(ppt_path)
         if result and result.exists():
