@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 
 class Priority(str, Enum):
@@ -63,7 +63,7 @@ class Improvement:
     suggestion: str  # 具體建議內容
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Improvement":
+    def from_dict(cls, data: dict) -> Improvement:
         """從 JSON dict 建立"""
         if isinstance(data, str):
             # 簡化格式:"[高] 項目: 建議"
@@ -75,7 +75,7 @@ class Improvement:
         )
 
     @classmethod
-    def from_text(cls, text: str) -> "Improvement":
+    def from_text(cls, text: str) -> Improvement:
         """從字串解析(支援 "[高] 項目: 建議" 格式)"""
         import re
 

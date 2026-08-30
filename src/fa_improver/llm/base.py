@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Protocol
+from typing import Any, Protocol
 
 
 @dataclass
@@ -18,7 +18,7 @@ class LLMResponse:
     finish_reason: str = ""
 
     # 原始回應(供除錯)
-    raw: Dict[str, Any] = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict)
 
     @property
     def estimated_cost_usd(self) -> float:

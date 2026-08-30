@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pptx import Presentation
-from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.util import Inches, Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
@@ -15,7 +13,7 @@ from ..layout.selector import find_content_layout
 def add_statistical_analysis_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
-    suggestions: List[str],
+    suggestions: list[str],
     variant: str = "statistical",
 ) -> None:
     """新增根因分析投影片
@@ -28,9 +26,7 @@ def add_statistical_analysis_slide(
     slide = prs.slides.add_slide(layout)
 
     title = _get_or_create_title(slide)
-    title.text_frame.text = (
-        "5-Why 根因推導" if variant == "5_why" else "根因驗證及統計分析"
-    )
+    title.text_frame.text = "5-Why 根因推導" if variant == "5_why" else "根因驗證及統計分析"
 
     # 內容
     if not suggestions:

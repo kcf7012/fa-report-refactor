@@ -1,9 +1,8 @@
 """評估解析器測試"""
 
 import pytest
-
-from fa_improver.parsers.evaluation_parser import EvaluationParser
 from fa_improver.domain.evaluation import Dimension, GapSeverity
+from fa_improver.parsers.evaluation_parser import EvaluationParser
 
 
 class TestJsonParser:
@@ -88,18 +87,22 @@ class TestTxtParser:
         """測試缺失嚴重度計算"""
         from fa_improver.domain.evaluation import DimensionScore
 
-        assert DimensionScore(
-            name=Dimension.BASIC_INFO, score=90, weight=15
-        ).gap_severity == GapSeverity.NONE
-        assert DimensionScore(
-            name=Dimension.BASIC_INFO, score=75, weight=15
-        ).gap_severity == GapSeverity.MINOR
-        assert DimensionScore(
-            name=Dimension.BASIC_INFO, score=60, weight=15
-        ).gap_severity == GapSeverity.MODERATE
-        assert DimensionScore(
-            name=Dimension.BASIC_INFO, score=40, weight=15
-        ).gap_severity == GapSeverity.SEVERE
+        assert (
+            DimensionScore(name=Dimension.BASIC_INFO, score=90, weight=15).gap_severity
+            == GapSeverity.NONE
+        )
+        assert (
+            DimensionScore(name=Dimension.BASIC_INFO, score=75, weight=15).gap_severity
+            == GapSeverity.MINOR
+        )
+        assert (
+            DimensionScore(name=Dimension.BASIC_INFO, score=60, weight=15).gap_severity
+            == GapSeverity.MODERATE
+        )
+        assert (
+            DimensionScore(name=Dimension.BASIC_INFO, score=40, weight=15).gap_severity
+            == GapSeverity.SEVERE
+        )
 
 
 class TestAutoDetection:

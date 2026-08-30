@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import os
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
-from .base import LLMAuthError, LLMClient, LLMError, LLMRateLimitError, LLMResponse, LLMTimeoutError
+from .base import LLMAuthError, LLMError, LLMRateLimitError, LLMResponse, LLMTimeoutError
 
 
 @dataclass
@@ -66,9 +65,7 @@ class OpenAIClient:
         key = os.environ.get("OPENAI_API_KEY")
         if not key:
             raise LLMAuthError(
-                "找不到 OpenAI API key。"
-                "請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，"
-                "或在初始化時傳入 api_key。"
+                "找不到 OpenAI API key。" "請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，" "或在初始化時傳入 api_key。"
             )
         return key
 
@@ -106,7 +103,7 @@ class OpenAIClient:
             {"role": "user", "content": user_prompt},
         ]
 
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "model": self.model,
             "messages": messages,
             "temperature": temperature,
@@ -151,7 +148,7 @@ class OpenAIClient:
                 # 速率限制(退避重試)
                 if "rate" in error_str or "429" in error_str:
                     if attempt < self.max_retries - 1:
-                        wait = 2 ** attempt
+                        wait = 2**attempt
                         time.sleep(wait)
                         continue
                     raise LLMRateLimitError(f"OpenAI 速率限制:{e}") from e

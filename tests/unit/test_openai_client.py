@@ -1,11 +1,9 @@
 """OpenAI Client 測試(使用 Mock,不需要真實 API)"""
 
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from fa_improver.llm.base import LLMAuthError, LLMError, LLMRateLimitError
+from fa_improver.llm.base import LLMAuthError
 from fa_improver.llm.openai_client import OpenAIClient
 
 

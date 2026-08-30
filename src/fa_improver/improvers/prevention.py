@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pptx import Presentation
-from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.util import Inches, Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..domain.suggestion import Improvement
@@ -16,7 +14,7 @@ from ..layout.selector import find_content_layout
 def add_prevention_measures_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
-    improvements: List[Improvement],
+    improvements: list[Improvement],
 ) -> None:
     """新增長期預防措施與改善對策投影片"""
     layout = find_content_layout(prs)

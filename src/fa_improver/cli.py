@@ -83,7 +83,7 @@ def _run(args) -> int:
     converted_path = converter.convert_if_needed(input_path)
 
     if converted_path is None:
-        print(f"✗ 無法處理輸入檔案(可能不是有效的 PowerPoint 檔案)")
+        print("✗ 無法處理輸入檔案(可能不是有效的 PowerPoint 檔案)")
         return 1
 
     actual_input = converted_path
@@ -113,7 +113,7 @@ def _run(args) -> int:
     print(f"   投影片數:{len(prs.slides)}")
 
     # 執行改善
-    print(f"🔧 執行改善...")
+    print("🔧 執行改善...")
     orchestrator = ImprovementOrchestrator(evaluation, actual_input)
 
     # 如果有自訂樣板目錄,傳入 TemplateLoader
@@ -128,7 +128,7 @@ def _run(args) -> int:
 
     result = orchestrator.execute(prs, output_path)
 
-    print(f"\n✅ 完成!")
+    print("\n✅ 完成!")
     print(f"   輸出:{result.output_path}")
     print(f"   投影片:{1 if False else ''}{result.original_slide_count} → {result.final_slide_count}")
     print(f"   母片保護:{'✓' if result.master_preserved else '✗'}")

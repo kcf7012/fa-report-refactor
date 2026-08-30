@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
 
-from pptx import Presentation
-from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.util import Inches, Pt
 
 from .colors import (
     ELAN_BLUE,
-    ELAN_GREEN,
     ELAN_GRAY,
+    ELAN_GREEN,
     ELAN_LIGHT_BLUE,
     ELAN_LIGHT_GRAY,
     ELAN_ORANGE,
@@ -85,9 +83,7 @@ class ChecklistGenerator(VisualGenerator):
     內容格式:List[str] 或 List[dict(text, checked, priority)]
     """
 
-    def generate(self, content: List) -> None:
-        from pptx.oxml.ns import qn
-
+    def generate(self, content: list) -> None:
         items = self._normalize(content)
 
         # 計算每個項目的高度
@@ -109,7 +105,9 @@ class ChecklistGenerator(VisualGenerator):
             box.line.color.rgb = ELAN_GRAY
             box.fill.solid()
             box.fill.fore_color.rgb = ELAN_LIGHT_GRAY if not item["checked"] else ELAN_GREEN
-            self._set_text(box, "✓" if item["checked"] else "☐", size=14, bold=True, align=PP_ALIGN.CENTER)
+            self._set_text(
+                box, "✓" if item["checked"] else "☐", size=14, bold=True, align=PP_ALIGN.CENTER
+            )
 
             # 文字
             text_box = self.slide.shapes.add_textbox(
@@ -128,7 +126,7 @@ class ChecklistGenerator(VisualGenerator):
             run.font.size = Pt(11)
             run.font.color.rgb = item["color"]
 
-    def _normalize(self, content: List) -> List[dict]:
+    def _normalize(self, content: list) -> list[dict]:
         """標準化輸入格式"""
         result = []
         for item in content:
@@ -152,7 +150,7 @@ class FlowDiagramGenerator(VisualGenerator):
     或 List[dict(name, status)]
     """
 
-    def generate(self, content: List) -> None:
+    def generate(self, content: list) -> None:
         steps = self._normalize(content)
         if not steps:
             return
@@ -197,14 +195,12 @@ class FlowDiagramGenerator(VisualGenerator):
                 arrow.fill.fore_color.rgb = ELAN_LIGHT_GRAY
                 arrow.line.fill.background()
 
-    def _normalize(self, content: List) -> List[dict]:
+    def _normalize(self, content: list) -> list[dict]:
         """標準化輸入,根據 status 給顏色"""
         result = []
         for item in content:
             if isinstance(item, str):
-                result.append(
-                    {"name": item, "status": "done", "color": ELAN_BLUE}
-                )
+                result.append({"name": item, "status": "done", "color": ELAN_BLUE})
             elif isinstance(item, dict):
                 status = item.get("status", "done")
                 color = {
@@ -213,9 +209,7 @@ class FlowDiagramGenerator(VisualGenerator):
                     "missing": ELAN_RED,
                     "pending": ELAN_LIGHT_BLUE,
                 }.get(status, ELAN_BLUE)
-                result.append(
-                    {"name": item.get("name", ""), "status": status, "color": color}
-                )
+                result.append({"name": item.get("name", ""), "status": status, "color": color})
         return result
 
 
@@ -278,7 +272,7 @@ class ProgressBarGenerator(VisualGenerator):
     內容格式:List[dict(label, value, max_value, color)]
     """
 
-    def generate(self, content: List[dict]) -> None:
+    def generate(self, content: list[dict]) -> None:
         items = self._normalize(content)
         if not items:
             return
@@ -350,7 +344,7 @@ class ProgressBarGenerator(VisualGenerator):
             run.font.color.rgb = item["color"]
             run.font.bold = True
 
-    def _normalize(self, content: List) -> List[dict]:
+    def _normalize(self, content: list) -> list[dict]:
         """標準化輸入"""
         result = []
         for item in content:
@@ -375,7 +369,7 @@ class TimelineGenerator(VisualGenerator):
     內容格式:List[dict(label, timeframe, color)]
     """
 
-    def generate(self, content: List[dict]) -> None:
+    def generate(self, content: list[dict]) -> None:
         phases = self._normalize(content)
         if not phases:
             return
@@ -410,7 +404,14 @@ class TimelineGenerator(VisualGenerator):
             node.fill.solid()
             node.fill.fore_color.rgb = phase["color"]
             node.line.color.rgb = phase["color"]
-            self._set_text(node, str(i + 1), size=14, bold=True, color=RGBColor(0xFF, 0xFF, 0xFF), align=PP_ALIGN.CENTER)
+            self._set_text(
+                node,
+                str(i + 1),
+                size=14,
+                bold=True,
+                color=RGBColor(0xFF, 0xFF, 0xFF),
+                align=PP_ALIGN.CENTER,
+            )
 
             # 標籤
             label_box = self.slide.shapes.add_textbox(
@@ -446,14 +447,12 @@ class TimelineGenerator(VisualGenerator):
                 run.font.size = Pt(9)
                 run.font.color.rgb = ELAN_GRAY
 
-    def _normalize(self, content: List) -> List[dict]:
+    def _normalize(self, content: list) -> list[dict]:
         """標準化輸入"""
         result = []
         for i, item in enumerate(content):
             if isinstance(item, str):
-                result.append(
-                    {"label": item, "timeframe": "", "color": ELAN_BLUE}
-                )
+                result.append({"label": item, "timeframe": "", "color": ELAN_BLUE})
             elif isinstance(item, dict):
                 color = item.get("color", ELAN_BLUE)
                 result.append(

@@ -12,18 +12,16 @@ from __future__ import annotations
 from typing import Optional
 
 from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.dml.color import RGBColor
+from pptx.util import Inches
 
 from ..domain.evaluation import DimensionScore, EvaluationResult
 from ..layout.selector import find_content_layout
 from ..visuals import (
-    ChecklistGenerator,
-    ComparisonTableGenerator,
     ELAN_BLUE,
-    ELAN_GREEN,
     ELAN_ORANGE,
     ELAN_RED,
+    ChecklistGenerator,
+    ComparisonTableGenerator,
 )
 
 

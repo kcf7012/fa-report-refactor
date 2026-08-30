@@ -1,9 +1,6 @@
 """視覺元素生成器測試"""
 
 import pytest
-from pptx import Presentation
-from pptx.util import Inches
-
 from fa_improver.visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -13,6 +10,7 @@ from fa_improver.visuals import (
     ProgressBarGenerator,
     TimelineGenerator,
 )
+from pptx import Presentation
 
 
 @pytest.fixture

@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import List, Optional
 
 from pptx import Presentation
 
 from ..domain.evaluation import Dimension, DimensionScore, EvaluationResult
-from ..domain.suggestion import Improvement, Priority
+from ..domain.suggestion import Improvement
 from .base import LLMClient, LLMError, LLMResponse
 from .prompts import SYSTEM_PROMPT, build_user_prompt
 
@@ -80,10 +79,7 @@ class LLMEvaluator:
         try:
             data = json.loads(content)
         except json.JSONDecodeError as e:
-            raise LLMError(
-                f"LLM 回應不是有效 JSON:{e}\n"
-                f"內容:{content[:500]}"
-            ) from e
+            raise LLMError(f"LLM 回應不是有效 JSON:{e}\n" f"內容:{content[:500]}") from e
 
         return self._from_dict(data, response, source_file)
 

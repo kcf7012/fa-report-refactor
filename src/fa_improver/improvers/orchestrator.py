@@ -5,23 +5,20 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import List
 
 from pptx import Presentation
 
 from ..domain.evaluation import Dimension, EvaluationResult, GapSeverity
 from ..domain.suggestion import Improvement
-from ..layout.selector import find_content_layout
 from ..layout.protector import MasterProtector
-from ..parsers.evaluation_parser import parse_evaluation
 from ..parsers.filename_parser import parse_filename
+from .analysis_method import add_analysis_method_slide
 from .basic_info import add_basic_info_slide
+from .evidence_checklist import add_evidence_checklist_slide
 from .prevention import add_prevention_measures_slide
+from .problem_definition import add_problem_definition_slide
 from .root_cause import add_statistical_analysis_slide
 from .summary import enhance_summary_section
-from .problem_definition import add_problem_definition_slide
-from .analysis_method import add_analysis_method_slide
-from .evidence_checklist import add_evidence_checklist_slide
 
 
 class SlideAction(str, Enum):
@@ -45,8 +42,8 @@ class SlideAction(str, Enum):
 class ImprovementPlan:
     """改善計畫:列出所有要執行的動作"""
 
-    actions: List[SlideAction] = field(default_factory=list)
-    notes: List[str] = field(default_factory=list)
+    actions: list[SlideAction] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
     def add(self, action: SlideAction, note: str = "") -> None:
         self.actions.append(action)
@@ -259,7 +256,9 @@ class ImprovementOrchestrator:
 
                 improvements.append(
                     Improvement(
-                        priority=Priority.HIGH if dim_score.gap_severity.value >= 2 else Priority.MEDIUM,
+                        priority=Priority.HIGH
+                        if dim_score.gap_severity.value >= 2
+                        else Priority.MEDIUM,
                         item=dim_score.name.value,
                         suggestion=dim_score.comment,
                     )

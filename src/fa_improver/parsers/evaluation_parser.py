@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import List
 
 from ..domain.evaluation import Dimension, DimensionScore, EvaluationResult
 from ..domain.suggestion import Improvement, Priority
@@ -69,7 +68,7 @@ class EvaluationParser:
 
     def _from_dict(self, data: dict) -> EvaluationResult:
         """從 dict 建立 EvaluationResult"""
-        dimensions: List[DimensionScore] = []
+        dimensions: list[DimensionScore] = []
 
         # 解析維度分數
         dims_data = data.get("dimensions", data.get("dimension_scores", {}))
@@ -109,7 +108,7 @@ class EvaluationParser:
             token_usage=data.get("token_usage", {}),
         )
 
-    def _parse_dimensions_from_txt(self, content: str) -> List[DimensionScore]:
+    def _parse_dimensions_from_txt(self, content: str) -> list[DimensionScore]:
         """從 TXT 解析維度分數"""
         dimensions = []
         # 格式範例:
@@ -120,10 +119,7 @@ class EvaluationParser:
         #   評語: ...
 
         pattern = re.compile(
-            r"【(.+?)】\s*\n"
-            r"\s*得分:\s*(\d+(?:\.\d+)?)\s*/\s*100"
-            r".*?\n"
-            r"\s*權重:\s*(\d+)%",
+            r"【(.+?)】\s*\n" r"\s*得分:\s*(\d+(?:\.\d+)?)\s*/\s*100" r".*?\n" r"\s*權重:\s*(\d+)%",
             re.MULTILINE,
         )
 
@@ -149,7 +145,7 @@ class EvaluationParser:
 
         return dimensions
 
-    def _parse_section_bullets(self, content: str, section_name: str) -> List[str]:
+    def _parse_section_bullets(self, content: str, section_name: str) -> list[str]:
         """從 TXT 解析條列式內容"""
         # 找 section 開始位置
         start_match = re.search(rf"{re.escape(section_name)}", content)
@@ -172,7 +168,7 @@ class EvaluationParser:
 
         return bullets
 
-    def _parse_improvements_from_txt(self, content: str) -> List[Improvement]:
+    def _parse_improvements_from_txt(self, content: str) -> list[Improvement]:
         """從 TXT 解析改進建議"""
         # 格式範例:
         # 1. [高] 根因分析深度不足: 目前僅止於...

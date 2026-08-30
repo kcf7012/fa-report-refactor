@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
 
 
 class VisualElement(str, Enum):
@@ -38,7 +37,7 @@ class TemplateSection:
     visual: VisualElement = VisualElement.BULLET_LIST
     max_bullets: int = 4
     max_words_per_bullet: int = 30
-    placeholder_items: List[str] = field(default_factory=list)
+    placeholder_items: list[str] = field(default_factory=list)
     """可被實際內容替換的 placeholder 項目,例如 ['DVT 正常品', 'PVT 異常品']"""
 
     def validate(self) -> None:
@@ -73,7 +72,7 @@ class SlideTemplate:
     layout_name: str = "2L - Topic"  # 使用的 layout(必須已存在)
 
     # 內容結構
-    sections: List[TemplateSection] = field(default_factory=list)
+    sections: list[TemplateSection] = field(default_factory=list)
 
     # 版面規範
     max_total_words: int = 200
@@ -89,13 +88,10 @@ class SlideTemplate:
     def validate(self) -> None:
         """驗證整個樣板"""
         if len(self.sections) == 0:
-            raise TemplateValidationError(
-                f"Template '{self.name}' 沒有任何 sections。"
-            )
+            raise TemplateValidationError(f"Template '{self.name}' 沒有任何 sections。")
         if len(self.sections) > 5:
             raise TemplateValidationError(
-                f"Template '{self.name}' 有 {len(self.sections)} 個 sections,超過 5。"
-                f"請拆分為多個樣板。"
+                f"Template '{self.name}' 有 {len(self.sections)} 個 sections,超過 5。" f"請拆分為多個樣板。"
             )
         if self.max_total_words > 300:
             raise TemplateValidationError(

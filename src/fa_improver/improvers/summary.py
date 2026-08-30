@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pptx import Presentation
-from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.util import Inches, Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..domain.suggestion import Improvement
-from ..layout.selector import find_content_layout
 from ..visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -24,7 +20,7 @@ from ..visuals import (
 def enhance_summary_section(
     prs: Presentation,
     evaluation: EvaluationResult,
-    improvements: List[Improvement],
+    improvements: list[Improvement],
 ) -> None:
     """強化 Summary 區塊
 
@@ -68,9 +64,7 @@ def _find_summary_index(prs: Presentation) -> int:
 
 def _add_executive_summary(slide, evaluation: EvaluationResult) -> None:
     """加入 Executive Summary 文字框"""
-    textbox = slide.shapes.add_textbox(
-        Inches(7.5), Inches(3.0), Inches(4.5), Inches(1.5)
-    )
+    textbox = slide.shapes.add_textbox(Inches(7.5), Inches(3.0), Inches(4.5), Inches(1.5))
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -86,12 +80,10 @@ def _add_executive_summary(slide, evaluation: EvaluationResult) -> None:
 
 
 def _add_key_improvements(
-    slide, improvements: List[Improvement], evaluation: EvaluationResult
+    slide, improvements: list[Improvement], evaluation: EvaluationResult
 ) -> None:
     """加入 Key Improvements Required 文字框"""
-    textbox = slide.shapes.add_textbox(
-        Inches(7.5), Inches(4.6), Inches(4.5), Inches(2.0)
-    )
+    textbox = slide.shapes.add_textbox(Inches(7.5), Inches(4.6), Inches(4.5), Inches(2.0))
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -104,7 +96,9 @@ def _add_key_improvements(
     if not improvements:
         improvements = [
             Improvement(
-                priority=improvements[0].priority if improvements else __import__(
+                priority=improvements[0].priority
+                if improvements
+                else __import__(
                     "fa_improver.domain.suggestion", fromlist=["Priority"]
                 ).Priority.MEDIUM,
                 item="改善建議",
@@ -123,9 +117,7 @@ def _add_strengths(slide, evaluation: EvaluationResult) -> None:
     if not evaluation.strengths:
         return
 
-    textbox = slide.shapes.add_textbox(
-        Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0)
-    )
+    textbox = slide.shapes.add_textbox(Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0))
     tf = textbox.text_frame
     tf.word_wrap = True
 

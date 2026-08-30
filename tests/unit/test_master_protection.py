@@ -1,9 +1,8 @@
 """母片保護測試 — 最關鍵的測試"""
 
 import pytest
+from fa_improver.layout.protector import MasterProtectionError, MasterProtector
 from pptx import Presentation
-
-from fa_improver.layout.protector import MasterProtector, MasterProtectionError
 
 
 class TestMasterProtection:
@@ -42,7 +41,6 @@ class TestMasterProtection:
 
         # 新增一張投影片
         from pptx.util import Inches
-        from pptx.enum.shapes import MSO_SHAPE
 
         new_slide = prs.slides.add_slide(prs.slide_layouts[1])
         new_slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))

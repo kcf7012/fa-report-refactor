@@ -15,13 +15,13 @@ from .suggestion import (
     Suggestion,
 )
 from .template import (
-    BUILTIN_TEMPLATES,
     BASIC_INFO_TEMPLATE,
-    ColorTheme,
+    BUILTIN_TEMPLATES,
     EXECUTIVE_SUMMARY_TEMPLATE,
     PREVENTION_OVERVIEW_TEMPLATE,
     ROOT_CAUSE_5_WHY_TEMPLATE,
     ROOT_CAUSE_STATISTICAL_TEMPLATE,
+    ColorTheme,
     SlideTemplate,
     TemplateSection,
     TemplateValidationError,

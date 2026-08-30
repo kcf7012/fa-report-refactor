@@ -1,18 +1,14 @@
 """樣板系統測試"""
 
 import json
-from pathlib import Path
 
 import pytest
-
 from fa_improver.domain.template import (
-    BUILTIN_TEMPLATES,
     BASIC_INFO_TEMPLATE,
-    ColorTheme,
+    BUILTIN_TEMPLATES,
     SlideTemplate,
     TemplateSection,
     TemplateValidationError,
-    VisualElement,
 )
 from fa_improver.templates.loader import TemplateLoader
 

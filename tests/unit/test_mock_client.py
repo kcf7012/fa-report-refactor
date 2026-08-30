@@ -1,8 +1,7 @@
 """Mock LLM Client 測試"""
 
 import pytest
-
-from fa_improver.llm.base import LLMAuthError, LLMError
+from fa_improver.llm.base import LLMAuthError
 from fa_improver.llm.mock_client import MockLLMClient
 
 
@@ -40,6 +39,7 @@ class TestMockLLMClient:
 
     def test_response_fn(self):
         """自訂回應函式"""
+
         def custom_fn(sys_p, user_p, json_mode):
             return f"echo: {user_p}"
 

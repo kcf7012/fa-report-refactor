@@ -1,11 +1,10 @@
 """新 3 個 Improvers 測試(Phase 4.5)"""
 
 import pytest
-from pptx import Presentation
-
-from fa_improver.improvers.problem_definition import add_problem_definition_slide
 from fa_improver.improvers.analysis_method import add_analysis_method_slide
 from fa_improver.improvers.evidence_checklist import add_evidence_checklist_slide
+from fa_improver.improvers.problem_definition import add_problem_definition_slide
+from pptx import Presentation
 
 
 class TestProblemDefinitionImprover:
@@ -121,7 +120,6 @@ class TestOrchestratorIntegration:
         from fa_improver.domain.evaluation import Dimension, DimensionScore, EvaluationResult
         from fa_improver.improvers.orchestrator import (
             ImprovementOrchestrator,
-            SlideAction,
         )
 
         # 構造低分評估(觸發所有 6 個維度)
@@ -142,7 +140,9 @@ class TestOrchestratorIntegration:
         from pathlib import Path
 
         # 用一個 fixture pptx
-        pptx_path = Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
+        pptx_path = (
+            Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
+        )
         if not pptx_path.exists():
             pytest.skip("範例 pptx 不存在")
 
@@ -161,12 +161,15 @@ class TestOrchestratorIntegration:
         from fa_improver.domain.evaluation import Dimension, DimensionScore, EvaluationResult
         from fa_improver.improvers.orchestrator import (
             ImprovementOrchestrator,
-            SlideAction,
         )
 
         # 構造滿分評估
         dimensions = [
-            DimensionScore(name=d, score=95, weight=15 if d in [Dimension.BASIC_INFO, Dimension.PROBLEM_DEF] else 20)
+            DimensionScore(
+                name=d,
+                score=95,
+                weight=15 if d in [Dimension.BASIC_INFO, Dimension.PROBLEM_DEF] else 20,
+            )
             for d in [
                 Dimension.BASIC_INFO,
                 Dimension.PROBLEM_DEF,
@@ -184,7 +187,9 @@ class TestOrchestratorIntegration:
 
         from pathlib import Path
 
-        pptx_path = Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
+        pptx_path = (
+            Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
+        )
         if not pptx_path.exists():
             pytest.skip("範例 pptx 不存在")
 

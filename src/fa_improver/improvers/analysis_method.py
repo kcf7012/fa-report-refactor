@@ -17,13 +17,12 @@ from pptx.util import Inches
 from ..domain.evaluation import DimensionScore, EvaluationResult
 from ..layout.selector import find_content_layout
 from ..visuals import (
-    ChecklistGenerator,
-    ComparisonTableGenerator,
     ELAN_BLUE,
     ELAN_GREEN,
-    ELAN_GRAY,
     ELAN_ORANGE,
     ELAN_RED,
+    ChecklistGenerator,
+    ComparisonTableGenerator,
 )
 
 

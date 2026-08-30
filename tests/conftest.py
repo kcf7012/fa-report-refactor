@@ -7,7 +7,6 @@
 4. 自動 skip 需要範例資料但不存在的測試
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -118,9 +117,7 @@ def sample_eval_json() -> Path:
     candidates = _REPORT_FILES.get("json", [])
     # 優先選擇 fa_report_ 開頭的 (評估檔),排除 _improved (改善輸出)
     eval_files = [
-        p
-        for p in candidates
-        if p.name.startswith("fa_report_") and "_improved" not in p.name
+        p for p in candidates if p.name.startswith("fa_report_") and "_improved" not in p.name
     ]
     if eval_files:
         return eval_files[0]
@@ -132,9 +129,7 @@ def sample_eval_txt() -> Path:
     """取優先符合的 eval TXT 檔案 (fa_report_*.txt, 排除 _improved)"""
     candidates = _REPORT_FILES.get("txt", [])
     eval_files = [
-        p
-        for p in candidates
-        if p.name.startswith("fa_report_") and "_improved" not in p.name
+        p for p in candidates if p.name.startswith("fa_report_") and "_improved" not in p.name
     ]
     if eval_files:
         return eval_files[0]

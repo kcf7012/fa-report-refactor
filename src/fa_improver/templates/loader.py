@@ -43,11 +43,7 @@ class TemplateLoader:
         raise KeyError(
             f"找不到樣板 '{name}'。"
             f"內建樣板:{list(BUILTIN_TEMPLATES.keys())}"
-            + (
-                f"\n自訂目錄: {self.custom_template_dir}"
-                if self.custom_template_dir
-                else ""
-            )
+            + (f"\n自訂目錄: {self.custom_template_dir}" if self.custom_template_dir else "")
         )
 
     def _try_load_custom(self, name: str) -> Optional[SlideTemplate]:
@@ -95,19 +91,13 @@ class TemplateLoader:
                 layout_name=data.get("layout_name", base.layout_name),
                 description=data.get("description", base.description),
                 max_total_words=data.get("max_total_words", base.max_total_words),
-                min_white_space_ratio=data.get(
-                    "min_white_space_ratio", base.min_white_space_ratio
-                ),
-                primary_visual=VisualElement(
-                    data.get("primary_visual", base.primary_visual.value)
-                ),
+                min_white_space_ratio=data.get("min_white_space_ratio", base.min_white_space_ratio),
+                primary_visual=VisualElement(data.get("primary_visual", base.primary_visual.value)),
                 color_theme=ColorTheme(data.get("color_theme", base.color_theme.value)),
             )
             # 合併 sections(如有 override)
             if "sections" in data:
-                template.sections = [
-                    self._section_from_dict(s) for s in data["sections"]
-                ]
+                template.sections = [self._section_from_dict(s) for s in data["sections"]]
             else:
                 template.sections = base.sections
             return template
@@ -147,8 +137,6 @@ class TemplateLoader:
         return sorted(names)
 
 
-def load_template(
-    name: str, custom_dir: Optional[Path] = None
-) -> SlideTemplate:
+def load_template(name: str, custom_dir: Optional[Path] = None) -> SlideTemplate:
     """便利函式:載入樣板"""
     return TemplateLoader(custom_dir).load(name)

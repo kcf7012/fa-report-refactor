@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 
 class Dimension(str, Enum):
@@ -102,9 +102,9 @@ class EvaluationResult:
 
     total_score: float
     grade: str  # A / B / C / D / F
-    dimensions: List[DimensionScore] = field(default_factory=list)
+    dimensions: list[DimensionScore] = field(default_factory=list)
     summary: str = ""
-    strengths: List[str] = field(default_factory=list)
+    strengths: list[str] = field(default_factory=list)
 
     # 元資料
     source_file: str = ""

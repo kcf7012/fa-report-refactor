@@ -23,8 +23,8 @@ from .base import (
 )
 from .colors import (
     ELAN_BLUE,
-    ELAN_GREEN,
     ELAN_GRAY,
+    ELAN_GREEN,
     ELAN_LIGHT_BLUE,
     ELAN_LIGHT_GRAY,
     ELAN_ORANGE,

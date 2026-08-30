@@ -3,8 +3,7 @@
 import json
 
 import pytest
-
-from fa_improver.domain.evaluation import Dimension, EvaluationResult
+from fa_improver.domain.evaluation import EvaluationResult
 from fa_improver.llm.evaluator import LLMEvaluator
 from fa_improver.llm.mock_client import MockLLMClient
 

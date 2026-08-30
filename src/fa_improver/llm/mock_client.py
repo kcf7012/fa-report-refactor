@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional
+from typing import Optional
 
-from .base import LLMClient, LLMResponse
+from .base import LLMResponse
 
 
 @dataclass
@@ -21,7 +21,7 @@ class MockLLMClient:
     """
 
     # 預錄回應:prompt 模式 → 回應
-    responses: Dict[str, str] = field(default_factory=dict)
+    responses: dict[str, str] = field(default_factory=dict)
 
     # 預設回應(無匹配時使用)
     default_response: str = '{"status": "ok", "message": "Mock response"}'
@@ -73,7 +73,7 @@ class MockLLMClient:
         """新增預錄回應"""
         self.responses[pattern] = response
 
-    def with_failing(self, error: Exception) -> "MockLLMClient":
+    def with_failing(self, error: Exception) -> MockLLMClient:
         """設定讓 client 拋出錯誤(用於錯誤處理測試)"""
         original_complete = self.complete
 

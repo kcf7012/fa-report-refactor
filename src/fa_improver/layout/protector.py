@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 from pptx import Presentation
 
@@ -12,12 +11,12 @@ from pptx import Presentation
 class MasterSnapshot:
     """母片的不可變快照"""
 
-    masters_xml: List[str] = field(default_factory=list)
-    layouts_xml: List[str] = field(default_factory=list)
-    layout_names: List[str] = field(default_factory=list)
+    masters_xml: list[str] = field(default_factory=list)
+    layouts_xml: list[str] = field(default_factory=list)
+    layout_names: list[str] = field(default_factory=list)
     image_count: int = 0
 
-    def diff(self, other: "MasterSnapshot") -> List[str]:
+    def diff(self, other: MasterSnapshot) -> list[str]:
         """比較兩個快照,回傳差異清單"""
         violations = []
         if self.masters_xml != other.masters_xml:
@@ -29,9 +28,7 @@ class MasterSnapshot:
                 f"Layout 數量/名稱變更:{len(self.layout_names)} → {len(other.layout_names)}"
             )
         if self.image_count != other.image_count:
-            violations.append(
-                f"圖片數量變更:{self.image_count} → {other.image_count}"
-            )
+            violations.append(f"圖片數量變更:{self.image_count} → {other.image_count}")
         return violations
 
 
@@ -79,7 +76,7 @@ class MasterProtector:
         violations = self.snapshot.diff(current)
         if violations:
             raise MasterProtectionError(
-                "母片保護失敗!\以下項目被修改:\n" + "\n".join(f"  - {v}" for v in violations)
+                "母片保護失敗!\\以下項目被修改:\n" + "\n".join(f"  - {v}" for v in violations)
             )
 
     def assert_can_add_slide(self, prs: Presentation, layout_name: str) -> None:

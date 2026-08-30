@@ -17,8 +17,8 @@ The skill includes a robust conversion system with multiple fallback methods:
 
 ### Method 1: LibreOffice (Primary)
 
-**Platforms**: Windows, Linux, macOS  
-**Reliability**: High (95%+ success rate)  
+**Platforms**: Windows, Linux, macOS
+**Reliability**: High (95%+ success rate)
 **Requirements**:
 - LibreOffice installed
 - Command-line tool `soffice` or `libreoffice` accessible
@@ -40,8 +40,8 @@ libreoffice --headless --convert-to pptx --outdir output/ input.ppt
 
 ### Method 2: Win32 COM (Windows Fallback)
 
-**Platforms**: Windows only  
-**Reliability**: Very High (98%+ success rate)  
+**Platforms**: Windows only
+**Reliability**: Very High (98%+ success rate)
 **Requirements**:
 - Microsoft PowerPoint installed
 - pywin32 package (`pip install pywin32`)
@@ -81,19 +81,19 @@ If both automatic methods fail, the system provides:
 ```python
 def auto_convert_if_needed(input_file):
     file_ext = os.path.splitext(input_file)[1].lower()
-    
+
     if file_ext == '.ppt':
         print("⚠️  Detected legacy format (.ppt)")
         converter = PPTConverter()
         pptx_file = converter.convert_ppt_to_pptx(input_file)
-        
+
         if pptx_file:
             print(f"✓ Conversion successful: {pptx_file}")
             return pptx_file, converter
         else:
             print("✗ Conversion failed")
             return None, None
-    
+
     return input_file, None  # Already .pptx
 ```
 
@@ -169,7 +169,7 @@ Before conversion, check if original .ppt has:
 # Linux
 sudo apt install libreoffice
 
-# macOS  
+# macOS
 # Install from https://www.libreoffice.org/
 ```
 
@@ -271,14 +271,14 @@ converter = PPTConverter()
 
 try:
     pptx_file = converter.convert_ppt_to_pptx("report.ppt")
-    
+
     if pptx_file:
         # Process file
         process_report(pptx_file)
     else:
         print("Conversion failed, trying manual method...")
         manual_instructions()
-        
+
 finally:
     converter.cleanup()
 ```
@@ -329,6 +329,5 @@ The integrated PPT conversion system provides:
 This ensures the FA Report Improvement skill works seamlessly with both modern and legacy PowerPoint formats.
 
 ---
-**版本**: 2.1.3  
+**版本**: 2.1.3
 **最後更新**: 2026-01-28
-
