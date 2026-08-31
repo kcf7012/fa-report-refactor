@@ -190,15 +190,16 @@ jobs:
           "
 
   # ============================================
-  # 整合測試(可選,需要 OPENAI_API_KEY secret)
+  # 整合測試(可選,需手動觸發 + OPENAI_API_KEY)
   # ============================================
+  # 由 workflow_call 入口觸發,手動運行需加上 OPENAI_API_KEY secret
+  # 默認不執行(僅在手动觸發 workflow_dispatch 時才會跑)
   integration:
-    name: Integration Tests (Optional)
+    name: Integration Tests (Manual)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [lint, test]
-    # 僅在有 OPENAI_API_KEY secret 時執行
-    if: ${{ secrets.OPENAI_API_KEY != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     continue-on-error: true
 
     steps:
@@ -218,12 +219,17 @@ jobs:
 
       - name: Run LLM integration test
         env:
+          # 手動觸發時需設置 secret
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::warning::OPENAI_API_KEY 未設置,跳過 integration test"
+            exit 0
+          fi
           uv run python -c "
           from fa_improver.llm.openai_client import OpenAIClient
           from fa_improver.llm.redact import redact_pii
-          client = OpenAIClient(redact_pii_before_send=True)
+          client = OpenAIClient(api_key='$OPENAI_API_KEY', redact_pii_before_send=True)
           print('LLM client with redact:', client.redact_pii_before_send)
           print('Redact sample:', redact_pii('張三 0912-345-678'))
           "
