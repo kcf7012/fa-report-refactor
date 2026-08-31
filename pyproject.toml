@@ -4,7 +4,7 @@ version = "3.1.0"
 description = "半導體 FA 報告智慧化改善工具"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = { text = "MIT License" }
 authors = [
     { name = "Kenny Kang", email = "kenny.kang@elan.com.tw" },
 ]
@@ -32,11 +32,25 @@ dev = [
     "black>=23.10",
     "pre-commit>=3.5",
     "types-Pillow",
+    "hatchling>=1.18",  # Build backend (uv package = true)
 ]
 
 # CLI 入口
 [project.scripts]
 fa-improve = "fa_improver.cli:main"
+
+# ============================================
+# Build system(讓 uv sync 安裝 package 本身)
+# ============================================
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fa_improver"]
+
+[tool.uv]
+package = true
 
 # ============================================
 # 工具設定
