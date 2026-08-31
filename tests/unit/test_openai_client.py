@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from fa_improver.llm.base import LLMAuthError
 from fa_improver.llm.openai_client import OpenAIClient
 
@@ -170,3 +169,151 @@ class TestOpenAIClientStats:
         client.reset_stats()
         assert client.total_calls == 0
         assert client.total_input_tokens == 0
+
+
+class TestOpenAIClientRetry:
+    """重試機制測試(基於 tenacity)"""
+
+    def _make_success_response(self):
+        """建立一個成功的 mock response"""
+        mock_response = MagicMock()
+        mock_response.model = "gpt-4o-mini"
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "ok"
+        mock_response.choices[0].finish_reason = "stop"
+        mock_response.usage.prompt_tokens = 10
+        mock_response.usage.completion_tokens = 5
+        mock_response.usage.total_tokens = 15
+        return mock_response
+
+    @patch("openai.OpenAI")
+    def test_tenacity_retries_on_transient_error(self, mock_openai_class):
+        """瞬時錯誤應重試(tenacity exponential backoff)"""
+        mock_client_instance = MagicMock()
+        call_count = {"n": 0}
+
+        success_response = self._make_success_response()
+
+        def transient_then_success(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] < 3:
+                raise Exception("Connection reset by peer")
+            return success_response
+
+        mock_client_instance.chat.completions.create.side_effect = transient_then_success
+        mock_openai_class.return_value = mock_client_instance
+
+        client = OpenAIClient(api_key="sk-test", max_retries=3)
+        response = client.complete("sys", "user")
+
+        assert response.content == "ok"
+        # 第 1、2 次失敗,第 3 次成功
+        assert call_count["n"] == 3
+
+    @patch("openai.OpenAI")
+    def test_tenacity_max_retries_exhausted(self, mock_openai_class):
+        """重試耗盡後拋出 LLMError"""
+        mock_client_instance = MagicMock()
+
+        def always_fail(*args, **kwargs):
+            raise Exception("Server error 500")
+
+        mock_client_instance.chat.completions.create.side_effect = always_fail
+        mock_openai_class.return_value = mock_client_instance
+
+        from fa_improver.llm.base import LLMError
+
+        client = OpenAIClient(api_key="sk-test", max_retries=3)
+        with pytest.raises(LLMError, match="OpenAI API 錯誤"):
+            client.complete("sys", "user")
+
+    @patch("openai.OpenAI")
+    def test_tenacity_rate_limit_retries(self, mock_openai_class):
+        """速率限制應重試(tenacity)"""
+        mock_client_instance = MagicMock()
+        call_count = {"n": 0}
+        success_response = self._make_success_response()
+
+        def rate_limit_then_success(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise Exception("Error 429 - Rate limit")
+            return success_response
+
+        mock_client_instance.chat.completions.create.side_effect = rate_limit_then_success
+        mock_openai_class.return_value = mock_client_instance
+
+        client = OpenAIClient(api_key="sk-test", max_retries=3)
+        response = client.complete("sys", "user")
+        assert response.content == "ok"
+        assert call_count["n"] == 2
+
+    @patch("openai.OpenAI")
+    def test_tenacious_timeout_retries(self, mock_openai_class):
+        """超時錯誤應重試"""
+        mock_client_instance = MagicMock()
+        call_count = {"n": 0}
+        success_response = self._make_success_response()
+
+        def timeout_then_success(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] < 2:
+                raise Exception("Request timeout")
+            return success_response
+
+        mock_client_instance.chat.completions.create.side_effect = timeout_then_success
+        mock_openai_class.return_value = mock_client_instance
+
+        client = OpenAIClient(api_key="sk-test", max_retries=3)
+        response = client.complete("sys", "user")
+        assert response.content == "ok"
+        assert call_count["n"] == 2
+
+
+class TestOpenAIClientErrorClassification:
+    """錯誤分類測試"""
+
+    def test_classify_auth_error(self):
+        """認證錯誤分類為 LLMAuthError"""
+        from fa_improver.llm.base import LLMAuthError
+
+        client = OpenAIClient(api_key="sk-test")
+        classified = client._classify_error(Exception("401 Invalid API key"))
+        assert isinstance(classified, LLMAuthError)
+
+    def test_classify_rate_limit_error(self):
+        """速率限制分類為 LLMRateLimitError"""
+        from fa_improver.llm.base import LLMRateLimitError
+
+        client = OpenAIClient(api_key="sk-test")
+        classified = client._classify_error(Exception("429 Too Many Requests"))
+        assert isinstance(classified, LLMRateLimitError)
+
+    def test_classify_timeout_error(self):
+        """超時分類為 LLMTimeoutError"""
+        from fa_improver.llm.base import LLMTimeoutError
+
+        client = OpenAIClient(api_key="sk-test")
+        classified = client._classify_error(Exception("Request timeout"))
+        assert isinstance(classified, LLMTimeoutError)
+
+    def test_classify_generic_error(self):
+        """其他錯誤分類為 LLMError"""
+        from fa_improver.llm.base import LLMError
+
+        client = OpenAIClient(api_key="sk-test")
+        classified = client._classify_error(Exception("Something went wrong"))
+        assert isinstance(classified, LLMError)
+
+    def test_should_retry_skips_auth(self):
+        """認證錯誤不重試"""
+        client = OpenAIClient(api_key="sk-test")
+        assert client._should_retry(Exception("401 Unauthorized")) is False
+        assert client._should_retry(Exception("Invalid api_key")) is False
+
+    def test_should_retry_allows_others(self):
+        """其他錯誤可重試"""
+        client = OpenAIClient(api_key="sk-test")
+        assert client._should_retry(Exception("500 Server Error")) is True
+        assert client._should_retry(Exception("timeout")) is True
+        assert client._should_retry(Exception("rate limit")) is True

@@ -13,6 +13,7 @@ python-dotenv>=1.0       # .env loading
 
 # Optional Requirements (可選 - 用於 LLM 整合)
 # openai>=1.0           # OpenAI API(install via: pip install -e ".[llm]")
+# tenacity>=8.2         # LLM 重試機制(exponential backoff,install via: pip install -e ".[llm]")
 
 # Optional Requirements (可選 - 用於 PPT 轉換)
 

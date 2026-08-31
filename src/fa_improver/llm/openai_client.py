@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 import os
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from tenacity import (
+    Retrying,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 from .base import LLMAuthError, LLMError, LLMRateLimitError, LLMResponse, LLMTimeoutError
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -100,6 +109,12 @@ class OpenAIClient:
         """呼叫 OpenAI API
 
         若 `redact_pii_before_send=True`,會在送出前自動遮罩 system 與 user 提示中的個資。
+
+        重試策略(基於 tenacity):
+        - 最大重試次數:`max_retries`(預設 3)
+        - 退避策略:exponential(1s, 2s, 4s, ...最大 10s)
+        - 認證錯誤(401 / auth / api_key)不重試
+        - 其他錯誤皆重試,直到達到 max_retries
         """
         # 在送出前遮罩個資(若啟用)
         if self.redact_pii_before_send:
@@ -126,62 +141,103 @@ class OpenAIClient:
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
-        # 重試邏輯
-        last_error: Exception | None = None
-        for attempt in range(self.max_retries):
-            try:
-                response = client.chat.completions.create(**kwargs)
-                self.total_calls += 1
+        # 建立 tenacity Retrying 物件
+        # retry_if_exception 只匹配「需要重試」的例外:認證錯誤以外的 Exception
+        retrying = Retrying(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(multiplier=1, min=1, max=10),
+            retry=retry_if_exception(self._should_retry),
+            reraise=True,
+        )
 
-                # 取得 token 使用
-                usage = response.usage
-                if usage:
-                    self.total_input_tokens += usage.prompt_tokens
-                    self.total_output_tokens += usage.completion_tokens
+        # 以迴圈手動驅動 tenacity
+        try:
+            for attempt in retrying:
+                with attempt:
+                    try:
+                        return self._do_call(client, kwargs)
+                    except Exception as e:
+                        # 認證錯誤不重試
+                        if not self._should_retry(e):
+                            classified = self._classify_error(e)
+                            raise classified from e
+                        logger.warning(
+                            "OpenAI 重試 (第 %s 次):%s", attempt.retry_state.attempt_number, e
+                        )
+                        raise
+        except LLMAuthError:
+            # 認證錯誤直接向上拋
+            raise
+        except (LLMRateLimitError, LLMTimeoutError):
+            # 重試耗盡
+            raise
+        except Exception as e:
+            # 其他錯誤 — 分類後再拋
+            classified = self._classify_error(e)
+            raise classified from e
 
-                # 取得內容
-                choice = response.choices[0]
-                content = choice.message.content or ""
+        # 理論上不會到這裡
+        raise LLMError(f"OpenAI 重試 {self.max_retries} 次後失敗")
 
-                return LLMResponse(
-                    content=content,
-                    model=response.model,
-                    prompt_tokens=usage.prompt_tokens if usage else 0,
-                    completion_tokens=usage.completion_tokens if usage else 0,
-                    total_tokens=usage.total_tokens if usage else 0,
-                    finish_reason=choice.finish_reason or "",
-                    raw=response.model_dump() if hasattr(response, "model_dump") else {},
-                )
-            except Exception as e:
-                last_error = e
-                error_str = str(e).lower()
+    def _do_call(self, client: Any, kwargs: dict[str, Any]) -> LLMResponse:
+        """實際呼叫 OpenAI API(被 tenacity 重試的單次呼叫)"""
+        response = client.chat.completions.create(**kwargs)
+        self.total_calls += 1
 
-                # 認證錯誤(不重試)
-                if "auth" in error_str or "api_key" in error_str or "401" in error_str:
-                    raise LLMAuthError(f"OpenAI 認證失敗:{e}") from e
+        # 取得 token 使用
+        usage = response.usage
+        if usage:
+            self.total_input_tokens += usage.prompt_tokens
+            self.total_output_tokens += usage.completion_tokens
 
-                # 速率限制(退避重試)
-                if "rate" in error_str or "429" in error_str:
-                    if attempt < self.max_retries - 1:
-                        wait = 2**attempt
-                        time.sleep(wait)
-                        continue
-                    raise LLMRateLimitError(f"OpenAI 速率限制:{e}") from e
+        # 取得內容
+        choice = response.choices[0]
+        content = choice.message.content or ""
 
-                # 超時(重試)
-                if "timeout" in error_str:
-                    if attempt < self.max_retries - 1:
-                        continue
-                    raise LLMTimeoutError(f"OpenAI 請求超時:{e}") from e
+        return LLMResponse(
+            content=content,
+            model=response.model,
+            prompt_tokens=usage.prompt_tokens if usage else 0,
+            completion_tokens=usage.completion_tokens if usage else 0,
+            total_tokens=usage.total_tokens if usage else 0,
+            finish_reason=choice.finish_reason or "",
+            raw=response.model_dump() if hasattr(response, "model_dump") else {},
+        )
 
-                # 其他錯誤(重試一次)
-                if attempt < self.max_retries - 1:
-                    time.sleep(1)
-                    continue
-                raise LLMError(f"OpenAI API 錯誤:{e}") from e
+    def _classify_error(self, exc: Exception) -> Exception:
+        """將原始例外分類為 LLMAuthError / LLMRateLimitError / LLMTimeoutError / LLMError
 
-        # 應不會到這裡
-        raise LLMError(f"OpenAI 重試 {self.max_retries} 次後失敗:{last_error}")
+        Args:
+            exc: 原始例外
+
+        Returns:
+            對應的 LLM 子類別例外(若適用)
+        """
+        error_str = str(exc).lower()
+
+        # 認證錯誤(不重試)
+        if "auth" in error_str or "api_key" in error_str or "401" in error_str:
+            return LLMAuthError(f"OpenAI 認證失敗:{exc}")
+
+        # 速率限制
+        if "rate" in error_str or "429" in error_str:
+            return LLMRateLimitError(f"OpenAI 速率限制:{exc}")
+
+        # 超時
+        if "timeout" in error_str:
+            return LLMTimeoutError(f"OpenAI 請求超時:{exc}")
+
+        # 其他錯誤
+        return LLMError(f"OpenAI API 錯誤:{exc}")
+
+    def _should_retry(self, exc: Exception) -> bool:
+        """判斷錯誤是否應重試
+
+        認證錯誤永不重試;其他錯誤皆重試。
+        """
+        error_str = str(exc).lower()
+        is_auth = "auth" in error_str or "api_key" in error_str or "401" in error_str
+        return not is_auth
 
     @property
     def total_cost_usd(self) -> float:
