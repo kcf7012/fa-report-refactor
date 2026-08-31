@@ -5,6 +5,109 @@ All notable changes to fa-improver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-08-31
+
+### 🔒 安全強化(LLM PII 個資遮罩)
+
+#### `src/fa_improver/llm/redact.py` — 個資遮罩模組
+- **支援遮罩類型**:
+  - 電話:`0912-345-678` → `0912-***-678`
+  - Email:`alice.wang@x.com` → `alice***@x.com`
+  - 中文姓名(需職稱):`張三先生` → `張*先生`
+  - IPv4:`192.168.1.100` → `192.168.1.***`
+  - 工號:`EMP-12345` → `EMP***`
+  - 身分證:`A123456789` → `A1***`
+  - 信用卡:`4111 1111 1111 1111` → `**** **** **** 1111`
+- **公開 API**:
+  - `redact_pii(text)` — 遮罩文字
+  - `redact_pii_with_stats(text)` — 遮罩並回傳統計
+  - `is_pii_present(text)` — 快速偵測
+  - `RedactionStats` — 追蹤各類型遮罩次數
+- **OpenAIClient 整合**:`redact_pii_before_send=True` 自動遮罩 prompts
+  - `total_redactions` 統計遮罩總數
+
+### 🔄 重試機制(LLM Tenacity)
+
+#### `src/fa_improver/llm/openai_client.py` 重寫 `complete()`
+- 使用 `tenacity.Retrying`:
+  - `stop_after_attempt(self.max_retries)` — 最多重試 3 次
+  - `wait_exponential(multiplier=1, min=1, max=10)` — 指數退避 1s → 2s → 4s ...
+  - `retry_if_exception(self._should_retry)` — 認證錯誤(401 / auth / api_key)**不重試**
+- 抽出 `_do_call()` 為單次呼叫、`_classify_error()` 統一錯誤分類
+- 重試時 `logger.warning` 記錄 `attempt_number`
+- 新增 `tenacity>=8.2` 至 `[llm]` optional-dependencies
+
+### 🎨 Improver TemplateLoader 完整整合
+
+#### 7 個 improver 函式統一加入 TemplateLoader 支援
+- `basic_info.py` — 標題 + placeholder items 從樣板讀取(7 個基本資料欄位)
+- `root_cause.py` — 5_why / statistical 變體標題從樣板讀取
+- `prevention.py` — 標題 + sections + placeholder items
+- `summary.py` — section headings(Executive Summary / Key Improvements)
+- `analysis_method.py` / `problem_definition.py` / `evidence_checklist.py` — 標題優先用樣板
+- **完全向後相容**:`template_loader=None` 時自動 fallback 到預設標題
+
+#### `src/fa_improver/improvers/_template_helper.py` 新模組
+- `resolve_template(loader, name)` — 載入樣板
+- `substitute_placeholders(text, variables)` — `{variable}` 替換
+- `get_resolved_placeholders(template, section_index, variables)` — 取得套用變數後的 placeholder
+
+#### `ImprovementOrchestrator` 新增 `template_loader` 參數
+- 傳遞給所有 improver,統一管理
+
+### 🎨 視覺元素整合
+
+#### 3 個 improver 加入視覺生成器
+- **`basic_info.py`** → `ChecklistGenerator`(checkbox 形式呈現基本資料)
+- **`root_cause.py`** → `FlowDiagramGenerator`(5_why variant 呈現推導流程)
+- **`prevention.py`** → `TimelineGenerator`(3 階段改善時程:短期 / 中期 / 長期)
+
+### 🖥️ CLI 增強
+
+#### `src/fa_improver/cli.py` 新增 3 個 CLI 參數
+- `--api-key <key>` — OpenAI API key(優先於環境變數與 .env)
+- `--redact-pii` — 啟用個資遮罩(對應 `redact_pii_before_send=True`)
+- `--base-url <url>` — 自訂 API endpoint(Groq / OpenRouter / Azure 等 OpenAI 相容介面)
+
+#### 修復預存 bug
+- `f"   投影片:{1 if False else ''}..."` → `f"   投影片:{original} → {final}"`
+
+### 🧪 測試強化
+
+- `tests/unit/test_redact.py` — **35 個**新測試(個資遮罩各類型 + OpenAI 整合)
+- `tests/unit/test_openai_client.py` — **10 個**新測試(tenacity 重試 + 錯誤分類)
+- `tests/unit/test_template_integration.py` — **21 個**新測試(7 個 improver + 自訂樣板 + 視覺元素)
+- `tests/unit/test_cli.py` — **8 個**新測試(argparse + 參數傳遞 + 端對端)
+- `tests/unit/test_template_validation.py` — **27 個**新測試(SlideTemplate.validate() 邊界與錯誤情境)
+
+### 📊 測試數據
+
+| 指標 | v3.0.1 | v3.1.0 | 進步 |
+|------|--------|--------|------|
+| 測試通過 | 102 + 3 skipped | **203 + 3 skipped** | **+101 (+99%)** |
+| 覆蓋率 | 85% | **90%** | **+5%** |
+| `domain/template.py` 覆蓋 | 76% | **100%** | +24% |
+| `cli.py` 覆蓋 | 0% | 78% | +78% |
+| `openai_client.py` 覆蓋 | 80% | 88% | +8% |
+| `llm/redact.py` 覆蓋 | N/A | 95% | 新模組 |
+
+### 📚 文件
+
+- 更新 `CHANGELOG.md`(本檔)
+- 更新 `references/virtual-environment-guide.md`(加上 tenacity 註解)
+
+### 🚀 安裝
+
+```bash
+# uv 使用者
+uv sync --extra llm  # 新增 tenacity
+
+# pip 使用者
+pip install -e ".[dev,llm]"
+```
+
+---
+
 ## [3.0.0] - 2026-08-31
 
 ### 🎉 重大重構(正式發布版)
@@ -227,6 +330,8 @@ cp .env.example .env
 
 ## 標籤
 
+- `v3.1.0` — LLM 安全強化 + TemplateLoader 完整整合 + 視覺元素 + CLI 增強
+- `v3.0.1` — Pre-commit + uv 依賴鎖定 + PPT 轉換測試
 - `v3.0.0` — 模組化 + 6 維度完整覆蓋
 - `v2.3.0` — 原始 baseline(已過時)
 - `baseline-v2.3.0` — 對照用 baseline tag

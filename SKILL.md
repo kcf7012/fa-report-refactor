@@ -1,7 +1,7 @@
 ---
 name: fa-report-improvement
-description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. v3.0 features modular architecture covering all 6 evaluation dimensions (100% trigger coverage), PPT/PPTX input support, JSON/TXT evaluation parsing, LLM integration (OpenAI-compatible), and 5 visual element generators. Master slide protection guaranteed through snapshot verification.
-version: 3.0.1
+description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. v3.1 features PII redaction, tenacity retry, full TemplateLoader integration, visual elements, and CLI enhancements.
+version: 3.1.0
 entrypoint: src/fa_improver/__main__.py
 inputs:
   - id: report
@@ -21,11 +21,23 @@ inputs:
     optional: true
 ---
 
-# FA Report Improvement v3.0
+# FA Report Improvement v3.1
 
 半導體 **F**ailure **A**nalysis 報告的智慧化改善工具,基於 6 維度評分標準。
 
-## ✨ v3.0 新特性
+## ✨ v3.1 新特性
+
+| 改進 | v3.0.1 | v3.1.0 |
+|------|--------|--------|
+| 個資遮罩(PII) | ❌ | ✅ 電話/Email/姓名/IP/工號/身分證/信用卡 |
+| LLM 重試機制 | 手寫 for-loop | ✅ tenacity 指數退避 |
+| TemplateLoader 整合 | 0/7 | **7/7** improver |
+| 視覺元素整合 | 1/8 | **4/8** improver(Checklist/Flow/Timeline) |
+| CLI 參數 | 5 個 | **8 個**(--api-key/--redact-pii/--base-url) |
+| 測試覆蓋 | 105 | **203** |
+| 覆蓋率 | 85% | **90%** |
+
+## ✨ v3.0 新特性(遺產)
 
 | 改進 | v2.3.0 | v3.0.0 |
 |------|--------|--------|

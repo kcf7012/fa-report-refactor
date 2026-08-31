@@ -4,7 +4,7 @@
 
 ## 版本
 
-**v3.0.1** — 模組化架構,6 維度完整覆蓋,LLM 整合 + pre-commit / uv lock / 13 個新測試
+**v3.1.0** — PII 個資遮罩 + tenacity 重試 + TemplateLoader 完整整合(7/7) + 視覺元素(Checklist/Flow/Timeline)+ CLI 增強(8 參數)+ 101 個新測試(覆蓋率 85% → 90%)
 
 > 更新紀錄見 [CHANGELOG.md](CHANGELOG.md)
 

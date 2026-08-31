@@ -1,4 +1,4 @@
-# FA Report Improvement Templates — v3.0.1 對照
+# FA Report Improvement Templates — v3.1.0 對照
 
 > **本檔為概念性樣板說明**(Template 1-5)
 > **實際實作**:8 個 JSON 樣板於 `src/fa_improver/templates/builtin/`
@@ -59,5 +59,5 @@
 - **Improver**:`EvidenceChecklistImprover`
 
 ---
-**版本**: 3.0.1
+**版本**: 3.1.0
 **最後更新**: 2026-08-31

@@ -1,6 +1,6 @@
 [project]
 name = "fa-improver"
-version = "3.0.0"
+version = "3.1.0"
 description = "半導體 FA 報告智慧化改善工具"
 readme = "README.md"
 requires-python = ">=3.10"
