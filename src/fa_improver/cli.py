@@ -40,6 +40,19 @@ def main() -> int:
         help="LLM 模型(預設 gpt-4o-mini)",
     )
     parser.add_argument(
+        "--api-key",
+        help="OpenAI API key(優先於 OPENAI_API_KEY 環境變數與 .env 檔案)",
+    )
+    parser.add_argument(
+        "--redact-pii",
+        action="store_true",
+        help="在送出前遮罩個資(電話/Email/中文姓名/IP/工號/身分證/信用卡)",
+    )
+    parser.add_argument(
+        "--base-url",
+        help="自訂 API endpoint(用於 OpenAI 相容介面如 Groq、OpenRouter)",
+    )
+    parser.add_argument(
         "--output",
         "-o",
         required=True,
@@ -130,9 +143,7 @@ def _run(args) -> int:
 
     print("\n✅ 完成!")
     print(f"   輸出:{result.output_path}")
-    print(
-        f"   投影片:{1 if False else ''}{result.original_slide_count} → {result.final_slide_count}"
-    )
+    print(f"   投影片:{result.original_slide_count} → {result.final_slide_count}")
     print(f"   母片保護:{'✓' if result.master_preserved else '✗'}")
     print(f"   耗時:{result.duration_seconds:.1f}s")
 
@@ -150,7 +161,12 @@ def _evaluate_with_llm(input_path: Path, args) -> EvaluationResult:
     if args.llm_provider == "openai":
         from .llm.openai_client import OpenAIClient
 
-        client = OpenAIClient(model=args.model)
+        client = OpenAIClient(
+            api_key=args.api_key,
+            model=args.model,
+            base_url=args.base_url,
+            redact_pii_before_send=args.redact_pii,
+        )
     elif args.llm_provider == "mock":
         from .llm.mock_client import MockLLMClient
 
