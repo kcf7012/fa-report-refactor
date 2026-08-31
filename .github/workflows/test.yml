@@ -12,9 +12,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Workflow 級環境變數(全 jobs 可用)
 env:
-  PYTHON_VERSION: "3.10"
   UV_VERSION: "0.5"
+  PYTHON_DEFAULT: "3.10"
 
 jobs:
   # ============================================
@@ -35,7 +36,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install dependencies
         run: uv sync --extra dev --extra llm
@@ -50,10 +51,10 @@ jobs:
         run: uv run black --check src/ tests/ scripts/ || true
 
   # ============================================
-  # 測試(主要)
+  # 測試(主要,Python 矩陣)
   # ============================================
   test:
-    name: Test Suite (Python ${{ env.PYTHON_VERSION }}, ${{ matrix.os }})
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -115,14 +116,12 @@ jobs:
           retention-days: 30
 
   # ============================================
-  # Pre-commit hooks(若配置)
+  # Pre-commit hooks
   # ============================================
   pre-commit:
     name: Pre-commit Hooks
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # 僅在 .pre-commit-config.yaml 存在時執行
-    continue-on-error: false
 
     steps:
       - uses: actions/checkout@v4
@@ -130,7 +129,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: ${{ env.PYTHON_DEFAULT }}
 
       - name: Get pre-commit cache
         id: cache
@@ -143,7 +142,7 @@ jobs:
         uses: pre-commit/action@v3.0.1
 
   # ============================================
-  # Build distribution(僅 main 分支)
+  # Build distribution(僅 main 分支 / tag)
   # ============================================
   build:
     name: Build Distribution
@@ -163,7 +162,7 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install build dependencies
         run: uv sync --extra dev
@@ -191,7 +190,7 @@ jobs:
           "
 
   # ============================================
-  # 整合測試(可選,需要 secrets)
+  # 整合測試(可選,需要 OPENAI_API_KEY secret)
   # ============================================
   integration:
     name: Integration Tests (Optional)
@@ -199,7 +198,7 @@ jobs:
     timeout-minutes: 10
     needs: [lint, test]
     # 僅在有 OPENAI_API_KEY secret 時執行
-    if: env.OPENAI_API_KEY != ''
+    if: ${{ secrets.OPENAI_API_KEY != '' }}
     continue-on-error: true
 
     steps:
@@ -212,18 +211,19 @@ jobs:
           enable-cache: true
 
       - name: Set up Python
-        run: uv python install ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install dependencies
         run: uv sync --extra dev --extra llm
 
-      - name: Run LLM integration test (mock)
+      - name: Run LLM integration test
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           uv run python -c "
           from fa_improver.llm.openai_client import OpenAIClient
           from fa_improver.llm.redact import redact_pii
-          print('LLM client with redact:', OpenAIClient(redact_pii_before_send=True).redact_pii_before_send)
+          client = OpenAIClient(redact_pii_before_send=True)
+          print('LLM client with redact:', client.redact_pii_before_send)
           print('Redact sample:', redact_pii('張三 0912-345-678'))
           "
