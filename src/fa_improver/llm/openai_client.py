@@ -33,11 +33,13 @@ class OpenAIClient:
     base_url: str | None = None  # 自訂 endpoint(用於相容 API)
     timeout: float = 60.0  # 秒
     max_retries: int = 3
+    redact_pii_before_send: bool = False  # 是否在送出前遮罩個資(預設關閉,保持向後相容)
 
     # 統計
     total_calls: int = 0
     total_input_tokens: int = 0
     total_output_tokens: int = 0
+    total_redactions: int = 0
 
     skip_dotenv: bool = False  # 測試用:跳過 .env 載入
 
@@ -65,9 +67,7 @@ class OpenAIClient:
         key = os.environ.get("OPENAI_API_KEY")
         if not key:
             raise LLMAuthError(
-                "找不到 OpenAI API key。"
-                "請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，"
-                "或在初始化時傳入 api_key。"
+                "找不到 OpenAI API key。請設定 OPENAI_API_KEY 環境變數、在 .env 檔案中提供，或在初始化時傳入 api_key。"
             )
         return key
 
@@ -97,7 +97,20 @@ class OpenAIClient:
         json_mode: bool = False,
         temperature: float = 0.0,
     ) -> LLMResponse:
-        """呼叫 OpenAI API"""
+        """呼叫 OpenAI API
+
+        若 `redact_pii_before_send=True`,會在送出前自動遮罩 system 與 user 提示中的個資。
+        """
+        # 在送出前遮罩個資(若啟用)
+        if self.redact_pii_before_send:
+            from .redact import redact_pii_with_stats
+
+            sys_result = redact_pii_with_stats(system_prompt)
+            user_result = redact_pii_with_stats(user_prompt)
+            system_prompt = sys_result.text
+            user_prompt = user_result.text
+            self.total_redactions += sys_result.stats.total + user_result.stats.total
+
         client = self._get_client()
 
         messages = [
@@ -182,3 +195,4 @@ class OpenAIClient:
         self.total_calls = 0
         self.total_input_tokens = 0
         self.total_output_tokens = 0
+        self.total_redactions = 0
