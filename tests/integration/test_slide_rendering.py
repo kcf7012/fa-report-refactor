@@ -40,14 +40,14 @@ def _is_empty_slide(slide) -> bool:
     if n_shapes >= 3:
         return False
     has_meaningful_text = any(
-        s.has_text_frame and s.text_frame.text.strip()
-        for s in slide.shapes
-        if s.has_text_frame
+        s.has_text_frame and s.text_frame.text.strip() for s in slide.shapes if s.has_text_frame
     )
     return not has_meaningful_text
 
 
-def _find_out_of_bounds_shape(slide, slide_width_inch: float, slide_height_inch: float, tolerance_inch: float = 0.2):
+def _find_out_of_bounds_shape(
+    slide, slide_width_inch: float, slide_height_inch: float, tolerance_inch: float = 0.2
+):
     """尋找超出 slide 邊界的 shape,回傳 (slide_idx, shape 名稱) 或 None
 
     條件(超出容忍值才算):
@@ -121,7 +121,7 @@ class TestSlideRenderingNoEmptySlides:
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
         # 只檢查「新增」的 slide(原 N 張之後的)
-        new_slides = list(prs.slides)[result.original_slide_count:]
+        new_slides = list(prs.slides)[result.original_slide_count :]
         empty_slides = []
         for offset, slide in enumerate(new_slides):
             slide_num = result.original_slide_count + offset + 1
@@ -143,7 +143,7 @@ class TestSlideRenderingNoEmptySlides:
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
-        new_slides = list(prs.slides)[result.original_slide_count:]
+        new_slides = list(prs.slides)[result.original_slide_count :]
         empty_slides = []
         for offset, slide in enumerate(new_slides):
             slide_num = result.original_slide_count + offset + 1
@@ -151,15 +151,15 @@ class TestSlideRenderingNoEmptySlides:
                 empty_slides.append(slide_num)
 
         assert not empty_slides, (
-            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:"
-            f" {empty_slides}。"
+            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:" f" {empty_slides}。"
         )
 
     def test_n160jcn_no_empty_slides(self):
         """N160JCN 改善後不應有空白投影片"""
         # N160JCN 檔名含空格,需 glob 尋找
         candidates = [
-            c for c in REPORT_DIR.glob("N160JCN-EEK*NG sample*.pptx")
+            c
+            for c in REPORT_DIR.glob("N160JCN-EEK*NG sample*.pptx")
             if "_improved" not in c.name and "smoke" not in c.name
         ]
         if not candidates:
@@ -167,8 +167,7 @@ class TestSlideRenderingNoEmptySlides:
         input_pptx = candidates[0]
         # 找對應的 eval JSON
         eval_candidates = [
-            c for c in REPORT_DIR.glob("fa_report_N160JCN*.json")
-            if "_improved" not in c.name
+            c for c in REPORT_DIR.glob("fa_report_N160JCN*.json") if "_improved" not in c.name
         ]
         if not eval_candidates:
             pytest.skip("找不到 N160JCN eval JSON")
@@ -176,7 +175,7 @@ class TestSlideRenderingNoEmptySlides:
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
-        new_slides = list(prs.slides)[result.original_slide_count:]
+        new_slides = list(prs.slides)[result.original_slide_count :]
         empty_slides = []
         for offset, slide in enumerate(new_slides):
             slide_num = result.original_slide_count + offset + 1
@@ -184,8 +183,7 @@ class TestSlideRenderingNoEmptySlides:
                 empty_slides.append(slide_num)
 
         assert not empty_slides, (
-            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:"
-            f" {empty_slides}。"
+            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:" f" {empty_slides}。"
         )
 
 
@@ -208,7 +206,7 @@ class TestSlideRenderingBounds:
         sh_inch = prs.slide_height / 914400
 
         # 只檢查「新增」的 slide(原 N 張之後的)— 原圖的母片設計不歸本測試管
-        new_slides = list(prs.slides)[result.original_slide_count:]
+        new_slides = list(prs.slides)[result.original_slide_count :]
         out_of_bounds = []
         for offset, slide in enumerate(new_slides):
             slide_num = result.original_slide_count + offset + 1
@@ -269,7 +267,7 @@ class TestSlideRenderingDynamicCoordinates:
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_smoke_dyn")
 
         # 至少有一個新增 slide 的 content shape 寬度 >= 8 in
-        new_slides = list(prs.slides)[result.original_slide_count:]
+        new_slides = list(prs.slides)[result.original_slide_count :]
         max_content_width = 0.0
         for slide in new_slides:
             for shape in slide.shapes:

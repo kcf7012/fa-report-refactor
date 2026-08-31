@@ -44,6 +44,7 @@ def add_basic_info_slide(
         slide_bounds: slide 尺寸(英寸),若提供則動態適應;否則用 10x7.5 預設
     """
     from ._logging import log_action
+
     with log_action("add_basic_info_slide"):
         _add_basic_info_slide_impl(
             prs, evaluation, filename_info, template_loader, template_name, slide_bounds
@@ -131,9 +132,7 @@ def _get_or_create_title(slide, slide_bounds: dict | None = None):
     # 動態 title textbox(避免太窄)
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     margin = 0.5
-    return slide.shapes.add_textbox(
-        Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1)
-    )
+    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):

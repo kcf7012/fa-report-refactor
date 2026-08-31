@@ -39,6 +39,7 @@ def add_prevention_measures_slide(
         slide_bounds: slide 尺寸(英寸),動態適應
     """
     from ._logging import log_action
+
     with log_action("add_prevention_measures_slide"):
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
@@ -123,6 +124,7 @@ def add_iqc_standard_slide(
         slide_bounds: slide 尺寸(英寸),由 orchestrator 傳入
     """
     from ._logging import log_action
+
     with log_action("add_iqc_standard_slide"):
         _add_prevention_subtype_slide(
             prs,
@@ -157,6 +159,7 @@ def add_monitoring_km_slide(
         slide_bounds: slide 尺寸(英寸),由 orchestrator 傳入
     """
     from ._logging import log_action
+
     with log_action("add_monitoring_km_slide"):
         _add_prevention_subtype_slide(
             prs,
@@ -220,14 +223,13 @@ def _add_prevention_subtype_slide(
     gen.generate({"headers": table_headers, "rows": table_rows})
 
     # 底部說明
-    note_box = slide.shapes.add_textbox(
-        Inches(margin), Inches(6.1), Inches(content_w), Inches(0.8)
-    )
+    note_box = slide.shapes.add_textbox(Inches(margin), Inches(6.1), Inches(content_w), Inches(0.8))
     tf = note_box.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
     p.text = "✓ 此頁為 v3.1.1 新增的標準化對照表,提供 IQC 抽驗比例與 KM 監測頻率"
     from pptx.dml.color import RGBColor
+
     p.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
     p.font.size = _Pt(10)
 
@@ -278,9 +280,7 @@ def _get_or_create_title(slide, slide_bounds: dict | None = None):
             return shape
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     margin = 0.5
-    return slide.shapes.add_textbox(
-        Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1)
-    )
+    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):

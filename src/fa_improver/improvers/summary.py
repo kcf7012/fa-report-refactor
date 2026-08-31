@@ -47,6 +47,7 @@ def enhance_summary_section(
         slide_bounds: slide 尺寸(英寸),動態適應
     """
     from ._logging import log_action
+
     with log_action("enhance_summary_section"):
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
@@ -99,9 +100,7 @@ def _add_executive_summary(
     tb_w = min(4.5, content_w * 0.45)
     # 動態 left:右對齊,確保不超出 slide_width
     left = content_w - tb_w + 0.5  # 0.5 是 margin
-    textbox = slide.shapes.add_textbox(
-        Inches(left), Inches(3.0), Inches(tb_w), Inches(1.5)
-    )
+    textbox = slide.shapes.add_textbox(Inches(left), Inches(3.0), Inches(tb_w), Inches(1.5))
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -131,9 +130,7 @@ def _add_key_improvements(
     """加入 Key Improvements Required 文字框"""
     tb_w = min(4.5, content_w * 0.45)
     left = content_w - tb_w + 0.5
-    textbox = slide.shapes.add_textbox(
-        Inches(left), Inches(4.6), Inches(tb_w), Inches(2.0)
-    )
+    textbox = slide.shapes.add_textbox(Inches(left), Inches(4.6), Inches(tb_w), Inches(2.0))
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -176,9 +173,7 @@ def _add_strengths(
     if not evaluation.strengths:
         return
 
-    textbox = slide.shapes.add_textbox(
-        Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0)
-    )
+    textbox = slide.shapes.add_textbox(Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0))
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -199,9 +194,7 @@ def _add_strengths(
         p.font.size = Pt(10)
 
 
-def _add_dimension_progress(
-    slide, evaluation: EvaluationResult, content_w: float = 9.0
-) -> None:
+def _add_dimension_progress(slide, evaluation: EvaluationResult, content_w: float = 9.0) -> None:
     """加入 6 維度評分進度條"""
     if not evaluation.dimensions:
         return

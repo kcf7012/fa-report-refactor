@@ -42,6 +42,7 @@ def add_statistical_analysis_slide(
         slide_bounds: slide 尺寸(英寸),動態適應
     """
     from ._logging import log_action
+
     with log_action(f"add_statistical_analysis_slide:variant={variant}"):
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
@@ -183,6 +184,7 @@ def add_5why_slide(
         slide_bounds: slide 尺寸(英寸)
     """
     from ._logging import get_logger, log_action
+
     logger = get_logger()
     with log_action(f"add_5why_slide:variant={variant}"):
         if variant == "5_why":
@@ -243,6 +245,7 @@ def add_5why_slide(
         # 底部說明
         from pptx.dml.color import RGBColor
         from pptx.util import Pt as _Pt
+
         note_box = slide.shapes.add_textbox(
             Inches(margin), Inches(6.6), Inches(content_w), Inches(0.5)
         )
@@ -262,9 +265,7 @@ def _get_or_create_title(slide, slide_bounds: dict | None = None):
             return shape
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     margin = 0.5
-    return slide.shapes.add_textbox(
-        Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1)
-    )
+    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):

@@ -354,9 +354,7 @@ class ImprovementOrchestrator:
             )
         else:
             # 萬一有未實作的 action,明確警告而非 silently skip
-            self.logger.warning(
-                "[%s] 未實作的 action (略過,可能產生空白頁)", action.value
-            )
+            self.logger.warning("[%s] 未實作的 action (略過,可能產生空白頁)", action.value)
 
     def _needs_improvement(self, dim: Dimension) -> bool:
         score = self._score(dim)

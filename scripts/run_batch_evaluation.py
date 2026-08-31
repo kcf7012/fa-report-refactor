@@ -16,10 +16,9 @@ import sys
 import time
 from pathlib import Path
 
-from pptx import Presentation
-
 from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 from fa_improver.parsers.evaluation_parser import parse_evaluation
+from pptx import Presentation
 
 REPORT_DIR = Path("/home/elan/fa-report-refactor/report")
 
