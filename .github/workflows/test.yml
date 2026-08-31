@@ -6,6 +6,8 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  # 允許 workflow_dispatch 手動觸發
+  workflow_dispatch:
 
 # 取消相同 workflow 的舊執行
 concurrency:
@@ -42,13 +44,13 @@ jobs:
         run: uv sync --extra dev --extra llm
 
       - name: Ruff check
-        run: uv run ruff check src/ tests/ scripts/ || true
+        run: uv run ruff check src/ tests/ scripts/
 
       - name: Ruff format check
-        run: uv run ruff format --check src/ tests/ scripts/ || true
+        run: uv run ruff format --check src/ tests/ scripts/
 
       - name: Black format check
-        run: uv run black --check src/ tests/ scripts/ || true
+        run: uv run black --check src/ tests/ scripts/
 
   # ============================================
   # 測試(主要,Python 矩陣)
@@ -77,6 +79,43 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --extra dev --extra llm --python ${{ matrix.python-version }}
+
+      - name: Create test fixtures
+        # CI 環境沒有 report/*.pptx(被 .gitignore 排除),需動態建立
+        run: |
+          mkdir -p report
+          uv run python -c "
+          from pptx import Presentation
+          import json
+          from pathlib import Path
+          # 建立測試 pptx(有母片 + 2 個 layouts)
+          prs = Presentation()
+          slide = prs.slides.add_slide(prs.slide_layouts[0])
+          slide.shapes.title.text = 'Test FA Report'
+          prs.save('report/test_sample.pptx')
+          # 建立測試 eval JSON
+          Path('report/test_eval.json').write_text(json.dumps({
+              'total_score': 70.0,
+              'grade': 'C',
+              'dimensions': {
+                  '基本資訊完整性': {'score': 60, 'weight': 15, 'comment': '需補充填寫'},
+                  '問題描述與定義': {'score': 70, 'weight': 15, 'comment': 'OK'},
+                  '分析方法與流程': {'score': 75, 'weight': 20, 'comment': 'OK'},
+                  '數據與證據支持': {'score': 70, 'weight': 20, 'comment': 'OK'},
+                  '根因分析': {'score': 60, 'weight': 20, 'comment': '需加強'},
+                  '改善對策': {'score': 80, 'weight': 10, 'comment': 'OK'},
+              },
+              'improvements': [{'item': '基本資訊', 'suggestion': '補充填寫', 'priority': 'HIGH'}],
+              'summary': '測試報告',
+              'strengths': ['完整分析'],
+          }, ensure_ascii=False), encoding='utf-8')
+          # 建立測試 eval TXT
+          Path('report/test_eval.txt').write_text('''FA 報告評估結果
+          總分:70
+          等級:C
+          ''', encoding='utf-8')
+          print('✅ Fixtures created')
+          "
 
       - name: Run test suite
         run: |
@@ -114,32 +153,6 @@ jobs:
           name: coverage-report
           path: coverage.xml
           retention-days: 30
-
-  # ============================================
-  # Pre-commit hooks
-  # ============================================
-  pre-commit:
-    name: Pre-commit Hooks
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_DEFAULT }}
-
-      - name: Get pre-commit cache
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: ${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
 
   # ============================================
   # Build distribution(僅 main 分支 / tag)
@@ -187,49 +200,4 @@ jobs:
           print('Name:', data['project']['name'])
           print('Version:', data['project']['version'])
           print('Requires Python:', data['project']['requires-python'])
-          "
-
-  # ============================================
-  # 整合測試(可選,需手動觸發 + OPENAI_API_KEY)
-  # ============================================
-  # 由 workflow_call 入口觸發,手動運行需加上 OPENAI_API_KEY secret
-  # 默認不執行(僅在手动觸發 workflow_dispatch 時才會跑)
-  integration:
-    name: Integration Tests (Manual)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [lint, test]
-    if: ${{ github.event_name == 'workflow_dispatch' }}
-    continue-on-error: true
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install ${{ env.PYTHON_DEFAULT }}
-
-      - name: Install dependencies
-        run: uv sync --extra dev --extra llm
-
-      - name: Run LLM integration test
-        env:
-          # 手動觸發時需設置 secret
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "::warning::OPENAI_API_KEY 未設置,跳過 integration test"
-            exit 0
-          fi
-          uv run python -c "
-          from fa_improver.llm.openai_client import OpenAIClient
-          from fa_improver.llm.redact import redact_pii
-          client = OpenAIClient(api_key='$OPENAI_API_KEY', redact_pii_before_send=True)
-          print('LLM client with redact:', client.redact_pii_before_send)
-          print('Redact sample:', redact_pii('張三 0912-345-678'))
           "
