@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 
+# ruff: noqa: I001
 import pytest
 from fa_improver.llm.openai_client import OpenAIClient
 
