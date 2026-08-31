@@ -1,4 +1,8 @@
-"""新增 FA 基本資訊投影片"""
+"""新增 FA 基本資訊投影片
+
+從 TemplateLoader 載入 'basic_info' 樣板取得標題與 placeholder items。
+向後相容:若不傳 loader,使用預設載入器。
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,8 @@ from pptx.util import Inches
 from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
 from ..parsers.filename_parser import FilenameInfo
+from ..templates.loader import TemplateLoader
+from ._template_helper import get_resolved_placeholders, resolve_template
 
 if TYPE_CHECKING:
     pass
@@ -19,40 +25,55 @@ def add_basic_info_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
     filename_info: FilenameInfo,
+    template_loader: TemplateLoader | None = None,
+    template_name: str = "basic_info",
 ) -> None:
-    """新增 FA 基本資訊投影片"""
+    """新增 FA 基本資訊投影片
+
+    Args:
+        prs: 簡報物件
+        evaluation: 評估結果
+        filename_info: 檔名解析結果
+        template_loader: 樣板載入器(可選,預設使用內建樣板)
+        template_name: 樣板名稱(預設 'basic_info')
+    """
     layout = find_content_layout(prs)
     slide = prs.slides.add_slide(layout)
 
-    # 標題
-    title_shape = _get_or_create_title(slide)
-    title_shape.text_frame.text = "FA 基本資訊"
+    # 載入樣板
+    template = resolve_template(template_loader, template_name)
 
-    # 內容
-    info_items = [
-        ("FA 編號", filename_info.to_fa_id()),
-        ("負責工程師", "ELAN FAE"),
-        ("客戶", filename_info.customer or "N/A"),
-        ("專案名稱", filename_info.project or "N/A"),
-        ("報告日期", filename_info.date or "N/A"),
-        ("失效數量", "依評核建議補充填寫"),
-        ("批號 (Lot No.)", "依評核建議補充填寫"),
-    ]
+    # 標題(從樣板)
+    title_shape = _get_or_create_title(slide)
+    title_shape.text_frame.text = template.title
+
+    # 從樣板取得 placeholder items 並套用變數替換
+    variables = {
+        "fa_id": filename_info.to_fa_id(),
+        "customer": filename_info.customer or "N/A",
+        "project": filename_info.project or "N/A",
+        "date": filename_info.date or "N/A",
+    }
+    placeholders = get_resolved_placeholders(template, section_index=0, variables=variables)
 
     body = _get_or_create_body(slide)
     tf = body.text_frame
     tf.clear()
-    for label, value in info_items:
+    for item in placeholders:
         p = tf.add_paragraph()
-        p.text = f"{label}: {value}"
+        p.text = item
         p.font.size = _PT(14)
 
-    # 優化建議項目(從 comment 抽取)
+    # 優化建議項目(從 comment 抽取,屬於 section index 1)
     if evaluation.dimensions:
         dim = next((d for d in evaluation.dimensions if d.name.value == "基本資訊完整性"), None)
         if dim and dim.comment:
+            # section 1 的標題(從樣板)
+            section1 = template.sections[1] if len(template.sections) > 1 else None
+            heading = section1.heading if section1 else "優化建議項目"
+
             p = tf.add_paragraph()
-            p.text = "\n[優化建議項目]"
+            p.text = f"\n[{heading}]"
             p.font.bold = True
             p.font.color.rgb = _COLOR(255, 0, 0)
 

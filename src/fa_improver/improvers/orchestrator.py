@@ -12,6 +12,7 @@ from ..domain.evaluation import Dimension, EvaluationResult, GapSeverity
 from ..domain.suggestion import Improvement
 from ..layout.protector import MasterProtector
 from ..parsers.filename_parser import parse_filename
+from ..templates.loader import TemplateLoader
 from .analysis_method import add_analysis_method_slide
 from .basic_info import add_basic_info_slide
 from .evidence_checklist import add_evidence_checklist_slide
@@ -77,11 +78,24 @@ class ImprovementOrchestrator:
         Dimension.PREVENTION: 85,
     }
 
-    def __init__(self, evaluation: EvaluationResult, input_path: Path):
+    def __init__(
+        self,
+        evaluation: EvaluationResult,
+        input_path: Path,
+        template_loader: TemplateLoader | None = None,
+    ):
+        """初始化 orchestrator
+
+        Args:
+            evaluation: 評估結果
+            input_path: 輸入檔案路徑
+            template_loader: 樣板載入器(可選,預設使用內建樣板)
+        """
         self.evaluation = evaluation
         self.input_path = Path(input_path)
         self.filename_info = parse_filename(self.input_path)
         self.protector = None  # 在 execute 時建立
+        self.template_loader = template_loader  # 可能為 None,improvers 會 fallback
 
     def build_plan(self) -> ImprovementPlan:
         """根據評估結果決定改善計畫"""
@@ -174,28 +188,48 @@ class ImprovementOrchestrator:
         )
 
     def _execute_action(self, prs: Presentation, action: SlideAction, suggestions: dict) -> None:
-        """執行單一改善動作"""
+        """執行單一改善動作
+
+        所有 improver 都會傳入 self.template_loader,讓它們可以從樣板讀取標題與結構。
+        """
         if action == SlideAction.ADD_BASIC_INFO:
             add_basic_info_slide(
                 prs,
                 evaluation=self.evaluation,
                 filename_info=self.filename_info,
+                template_loader=self.template_loader,
             )
         elif action == SlideAction.ADD_PROBLEM_DEFINITION:
             dim = self.evaluation.dimension_dict.get(Dimension.PROBLEM_DEF)
-            add_problem_definition_slide(prs, self.evaluation, dim)
+            add_problem_definition_slide(
+                prs,
+                self.evaluation,
+                dim,
+                template_loader=self.template_loader,
+            )
         elif action == SlideAction.ADD_ANALYSIS_METHOD:
             dim = self.evaluation.dimension_dict.get(Dimension.METHOD)
-            add_analysis_method_slide(prs, self.evaluation, dim)
+            add_analysis_method_slide(
+                prs,
+                self.evaluation,
+                dim,
+                template_loader=self.template_loader,
+            )
         elif action == SlideAction.ADD_EVIDENCE_CHECKLIST:
             dim = self.evaluation.dimension_dict.get(Dimension.EVIDENCE)
-            add_evidence_checklist_slide(prs, self.evaluation, dim)
+            add_evidence_checklist_slide(
+                prs,
+                self.evaluation,
+                dim,
+                template_loader=self.template_loader,
+            )
         elif action == SlideAction.ADD_ROOT_CAUSE_5_WHY:
             add_statistical_analysis_slide(
                 prs,
                 evaluation=self.evaluation,
                 suggestions=suggestions.get("根因分析", []),
                 variant="5_why",
+                template_loader=self.template_loader,
             )
         elif action == SlideAction.ADD_ROOT_CAUSE_STATISTICAL:
             add_statistical_analysis_slide(
@@ -203,18 +237,21 @@ class ImprovementOrchestrator:
                 evaluation=self.evaluation,
                 suggestions=suggestions.get("根因分析", []),
                 variant="statistical",
+                template_loader=self.template_loader,
             )
         elif action == SlideAction.ADD_PREVENTION_OVERVIEW:
             add_prevention_measures_slide(
                 prs,
                 evaluation=self.evaluation,
                 improvements=self.evaluation_improvements(),
+                template_loader=self.template_loader,
             )
         elif action == SlideAction.ENHANCE_SUMMARY:
             enhance_summary_section(
                 prs,
                 evaluation=self.evaluation,
                 improvements=self.evaluation_improvements(),
+                template_loader=self.template_loader,
             )
 
     def _needs_improvement(self, dim: Dimension) -> bool:

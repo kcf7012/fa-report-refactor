@@ -1,4 +1,8 @@
-"""Summary 強化 — 展開為多張投影片"""
+"""Summary 強化 — 展開為多張投影片
+
+從 TemplateLoader 載入 'executive_summary' 樣板取得標題與 sections 標題。
+向後相容:若不傳 loader,使用預設載入器。
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ from pptx.util import Inches, Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..domain.suggestion import Improvement
+from ..templates.loader import TemplateLoader
 from ..visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -15,12 +20,15 @@ from ..visuals import (
     ELAN_RED,
     ProgressBarGenerator,
 )
+from ._template_helper import resolve_template
 
 
 def enhance_summary_section(
     prs: Presentation,
     evaluation: EvaluationResult,
     improvements: list[Improvement],
+    template_loader: TemplateLoader | None = None,
+    template_name: str = "executive_summary",
 ) -> None:
     """強化 Summary 區塊
 
@@ -28,7 +36,20 @@ def enhance_summary_section(
     - 保留原 Summary 投影片不動
     - 注入 Executive Summary 與 Key Improvements
     - 若有空間,加入 6 維度評分視覺化
+
+    Args:
+        prs: 簡報物件
+        evaluation: 評估結果
+        improvements: 改進建議
+        template_loader: 樣板載入器(可選)
+        template_name: 樣板名稱(預設 'executive_summary')
     """
+    # 載入樣板(讀取標題結構)
+    try:
+        template = resolve_template(template_loader, template_name)
+    except KeyError:
+        template = None  # fallback
+
     summary_idx = _find_summary_index(prs)
     if summary_idx == -1:
         summary_idx = len(prs.slides) - 1
@@ -41,14 +62,14 @@ def enhance_summary_section(
     if evaluation.dimensions:
         _add_dimension_progress(slide, evaluation)
 
-    # 注入 Executive Summary
-    _add_executive_summary(slide, evaluation)
+    # 注入 Executive Summary(從樣板讀取 section heading)
+    _add_executive_summary(slide, evaluation, template)
 
     # 注入 Key Improvements
-    _add_key_improvements(slide, improvements, evaluation)
+    _add_key_improvements(slide, improvements, evaluation, template)
 
     # 注入分析優點
-    _add_strengths(slide, evaluation)
+    _add_strengths(slide, evaluation, template)
 
 
 def _find_summary_index(prs: Presentation) -> int:
@@ -62,14 +83,19 @@ def _find_summary_index(prs: Presentation) -> int:
     return -1
 
 
-def _add_executive_summary(slide, evaluation: EvaluationResult) -> None:
+def _add_executive_summary(slide, evaluation: EvaluationResult, template=None) -> None:
     """加入 Executive Summary 文字框"""
     textbox = slide.shapes.add_textbox(Inches(7.5), Inches(3.0), Inches(4.5), Inches(1.5))
     tf = textbox.text_frame
     tf.word_wrap = True
 
+    # 從樣板讀取 section heading
+    heading = "Executive Summary"
+    if template and len(template.sections) >= 3:
+        heading = template.sections[2].heading or heading
+
     p = tf.paragraphs[0]
-    p.text = "Executive Summary"
+    p.text = heading
     p.font.bold = True
     p.font.size = Pt(14)
     p.font.color.rgb = RGBColor(0, 112, 192)
@@ -80,15 +106,23 @@ def _add_executive_summary(slide, evaluation: EvaluationResult) -> None:
 
 
 def _add_key_improvements(
-    slide, improvements: list[Improvement], evaluation: EvaluationResult
+    slide,
+    improvements: list[Improvement],
+    evaluation: EvaluationResult,
+    template=None,
 ) -> None:
     """加入 Key Improvements Required 文字框"""
     textbox = slide.shapes.add_textbox(Inches(7.5), Inches(4.6), Inches(4.5), Inches(2.0))
     tf = textbox.text_frame
     tf.word_wrap = True
 
+    # 從樣板讀取 section heading
+    heading = "Key Improvements Required"
+    if template and len(template.sections) >= 4:
+        heading = template.sections[3].heading or heading
+
     p = tf.paragraphs[0]
-    p.text = "Key Improvements Required"
+    p.text = heading
     p.font.bold = True
     p.font.size = Pt(14)
     p.font.color.rgb = RGBColor(255, 0, 0)
@@ -112,7 +146,7 @@ def _add_key_improvements(
         p.font.size = Pt(10)
 
 
-def _add_strengths(slide, evaluation: EvaluationResult) -> None:
+def _add_strengths(slide, evaluation: EvaluationResult, template=None) -> None:
     """加入分析優點與成功驗證"""
     if not evaluation.strengths:
         return
@@ -121,8 +155,13 @@ def _add_strengths(slide, evaluation: EvaluationResult) -> None:
     tf = textbox.text_frame
     tf.word_wrap = True
 
+    # 從樣板讀取 section heading
+    heading = "分析優點與成功驗證"
+    if template and len(template.sections) >= 2:
+        heading = template.sections[1].heading or heading
+
     p = tf.paragraphs[0]
-    p.text = "分析優點與成功驗證"
+    p.text = heading
     p.font.bold = True
     p.font.size = Pt(14)
     p.font.color.rgb = RGBColor(0, 112, 192)

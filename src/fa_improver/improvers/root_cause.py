@@ -1,4 +1,8 @@
-"""新增根因分析相關投影片"""
+"""新增根因分析相關投影片
+
+從 TemplateLoader 載入 'root_cause_5why' 或 'root_cause_statistical' 樣板取得標題。
+向後相容:若不傳 loader,使用預設載入器。
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,8 @@ from pptx.util import Inches, Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
+from ..templates.loader import TemplateLoader
+from ._template_helper import get_resolved_placeholders, resolve_template
 
 
 def add_statistical_analysis_slide(
@@ -15,18 +21,29 @@ def add_statistical_analysis_slide(
     evaluation: EvaluationResult,
     suggestions: list[str],
     variant: str = "statistical",
+    template_loader: TemplateLoader | None = None,
 ) -> None:
     """新增根因分析投影片
 
-    variant:
-    - "5_why": 5-Why 推導流程
-    - "statistical": 統計驗證方法
+    Args:
+        prs: 簡報物件
+        evaluation: 評估結果
+        suggestions: 建議清單
+        variant:
+            - "5_why": 5-Why 推導流程
+            - "statistical": 統計驗證方法
+        template_loader: 樣板載入器(可選)
     """
+    # 載入對應樣板
+    template_name = "root_cause_5why" if variant == "5_why" else "root_cause_statistical"
+    template = resolve_template(template_loader, template_name)
+
     layout = find_content_layout(prs)
     slide = prs.slides.add_slide(layout)
 
+    # 標題(從樣板)
     title = _get_or_create_title(slide)
-    title.text_frame.text = "5-Why 根因推導" if variant == "5_why" else "根因驗證及統計分析"
+    title.text_frame.text = template.title
 
     # 內容
     if not suggestions:
@@ -36,30 +53,47 @@ def add_statistical_analysis_slide(
     tf = body.text_frame
     tf.clear()
 
+    # section 0 的標題
+    section0 = template.sections[0] if template.sections else None
+    heading0 = section0.heading if section0 else "針對問題點之深度分析建議"
+
     p = tf.paragraphs[0]
-    p.text = "針對問題點之深度分析建議:"
+    p.text = f"{heading0}:"
     p.font.bold = True
     p.font.size = Pt(18)
     p.font.color.rgb = RGBColor(0, 112, 192)
 
-    for sug in suggestions[:4]:
+    # 限制在 max_bullets
+    max_bullets = section0.max_bullets if section0 else 4
+    for sug in suggestions[:max_bullets]:
         p = tf.add_paragraph()
         p.text = sug
         p.font.size = Pt(14)
 
-    # 建議執行動作
-    p = tf.add_paragraph()
-    p.text = "\n[建議執行動作]"
-    p.font.bold = True
-
-    for action in [
-        "設定 DVT 正常品 vs PVT 異常品之對照組",
-        "使用獨立樣本 t 檢定驗證參數顯著性 (p < 0.05)",
-        "確保統計證據支持最終提到的根本原因",
-    ]:
+    # section 1 的標題(若存在)
+    section1 = template.sections[1] if len(template.sections) > 1 else None
+    if section1:
         p = tf.add_paragraph()
-        p.text = f"• {action}"
-        p.font.size = Pt(12)
+        p.text = f"\n[{section1.heading}]"
+        p.font.bold = True
+
+        # 從樣板讀取 placeholder_items
+        placeholders = get_resolved_placeholders(template, section_index=1)
+        if placeholders:
+            for item in placeholders:
+                p = tf.add_paragraph()
+                p.text = f"• {item}"
+                p.font.size = Pt(12)
+        else:
+            # fallback:統計驗證預設 actions
+            for action in [
+                "設定 DVT 正常品 vs PVT 異常品之對照組",
+                "使用獨立樣本 t 檢定驗證參數顯著性 (p < 0.05)",
+                "確保統計證據支持最終提到的根本原因",
+            ]:
+                p = tf.add_paragraph()
+                p.text = f"• {action}"
+                p.font.size = Pt(12)
 
 
 def _get_or_create_title(slide):

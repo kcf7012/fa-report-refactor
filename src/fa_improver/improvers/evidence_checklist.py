@@ -14,6 +14,7 @@ from pptx.util import Inches
 
 from ..domain.evaluation import DimensionScore, EvaluationResult
 from ..layout.selector import find_content_layout
+from ..templates.loader import TemplateLoader
 from ..visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -22,12 +23,15 @@ from ..visuals import (
     ChecklistGenerator,
     ComparisonTableGenerator,
 )
+from ._template_helper import resolve_template
 
 
 def add_evidence_checklist_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
     dimension: DimensionScore | None = None,
+    template_loader: TemplateLoader | None = None,
+    template_name: str = "evidence_checklist",
 ) -> None:
     """新增數據與證據支持投影片
 
@@ -35,13 +39,22 @@ def add_evidence_checklist_slide(
         prs: 簡報物件
         evaluation: 評估結果
         dimension: 該維度的評分(可選)
+        template_loader: 樣板載入器(可選)
+        template_name: 樣板名稱(預設 'evidence_checklist')
     """
     layout = find_content_layout(prs)
     slide = prs.slides.add_slide(layout)
 
-    # 標題
+    # 標題 — 優先從樣板讀取
     title = _get_or_create_title(slide)
-    title.text_frame.text = "數據與證據支持"
+    if template_loader is not None:
+        try:
+            template = resolve_template(template_loader, template_name)
+            title.text_frame.text = template.title
+        except KeyError:
+            title.text_frame.text = "數據與證據支持"
+    else:
+        title.text_frame.text = "數據與證據支持"
 
     # 1. 對照組 vs 異常品 數據對照表
     _add_comparison_data_table(slide)

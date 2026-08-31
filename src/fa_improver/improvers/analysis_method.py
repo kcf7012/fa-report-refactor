@@ -14,6 +14,7 @@ from pptx.util import Inches
 
 from ..domain.evaluation import DimensionScore, EvaluationResult
 from ..layout.selector import find_content_layout
+from ..templates.loader import TemplateLoader
 from ..visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -22,12 +23,15 @@ from ..visuals import (
     ChecklistGenerator,
     ComparisonTableGenerator,
 )
+from ._template_helper import resolve_template
 
 
 def add_analysis_method_slide(
     prs: Presentation,
     evaluation: EvaluationResult,
     dimension: DimensionScore | None = None,
+    template_loader: TemplateLoader | None = None,
+    template_name: str = "analysis_method",
 ) -> None:
     """新增分析方法與流程投影片
 
@@ -35,13 +39,22 @@ def add_analysis_method_slide(
         prs: 簡報物件
         evaluation: 評估結果
         dimension: 該維度的評分(可選)
+        template_loader: 樣板載入器(可選)
+        template_name: 樣板名稱(預設 'analysis_method',若無樣板則使用預設標題)
     """
     layout = find_content_layout(prs)
     slide = prs.slides.add_slide(layout)
 
-    # 標題
+    # 標題 — 優先從樣板讀取,fallback 到預設
     title = _get_or_create_title(slide)
-    title.text_frame.text = "分析方法與流程"
+    if template_loader is not None:
+        try:
+            template = resolve_template(template_loader, template_name)
+            title.text_frame.text = template.title
+        except KeyError:
+            title.text_frame.text = "分析方法與流程"
+    else:
+        title.text_frame.text = "分析方法與流程"
 
     # 1. 8D 流程檢查清單
     _add_8d_checklist(slide)
