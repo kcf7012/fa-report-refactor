@@ -13,12 +13,17 @@ from ..domain.suggestion import Improvement
 from ..layout.protector import MasterProtector
 from ..parsers.filename_parser import parse_filename
 from ..templates.loader import TemplateLoader
+from ._logging import get_logger, log_action
 from .analysis_method import add_analysis_method_slide
 from .basic_info import add_basic_info_slide
 from .evidence_checklist import add_evidence_checklist_slide
-from .prevention import add_prevention_measures_slide
+from .prevention import (
+    add_iqc_standard_slide,
+    add_monitoring_km_slide,
+    add_prevention_measures_slide,
+)
 from .problem_definition import add_problem_definition_slide
-from .root_cause import add_statistical_analysis_slide
+from .root_cause import add_5why_slide, add_statistical_analysis_slide
 from .summary import enhance_summary_section
 
 
@@ -96,6 +101,12 @@ class ImprovementOrchestrator:
         self.filename_info = parse_filename(self.input_path)
         self.protector = None  # 在 execute 時建立
         self.template_loader = template_loader  # 可能為 None,improvers 會 fallback
+        self.logger = get_logger()
+
+        # === Slide 尺寸資訊(從 pptx 讀取,避免 hard-coded)===
+        # 由 execute() 在讀取 prs 後設定
+        self.slide_width_inch: float = 10.0
+        self.slide_height_inch: float = 7.5
 
     def build_plan(self) -> ImprovementPlan:
         """根據評估結果決定改善計畫"""
@@ -161,11 +172,37 @@ class ImprovementOrchestrator:
         self.protector = MasterProtector(prs)
         original_count = len(prs.slides)
 
+        # === 讀取真實 slide 尺寸(EMU 914400 = 1 inch)===
+        self.slide_width_inch = prs.slide_width / 914400
+        self.slide_height_inch = prs.slide_height / 914400
+        self.logger.info(
+            "Slide 尺寸: %.2f x %.2f in (%d 張原投影片)",
+            self.slide_width_inch,
+            self.slide_height_inch,
+            original_count,
+        )
+
         plan = self.build_plan()
         suggestions = self._build_suggestions()
 
+        self.logger.info("改善計畫:%d 個動作", len(plan.actions))
+        for idx, action in enumerate(plan.actions, 1):
+            self.logger.info("  [%d/%d] %s", idx, len(plan.actions), action.value)
+
+        # === 執行每個 action,失敗時記錄但不中斷整個批次 ===
         for action in plan.actions:
-            self._execute_action(prs, action, suggestions)
+            try:
+                with log_action(action.value, action_idx=plan.actions.index(action) + 1):
+                    self._execute_action(prs, action, suggestions)
+            except Exception as e:
+                # 記錄失敗但繼續(讓其他 action 仍可執行)
+                self.logger.error(
+                    "[%s] 執行失敗(略過): %s: %s",
+                    action.value,
+                    type(e).__name__,
+                    e,
+                )
+                # 不 raise,讓批次完成;但 plan 仍記錄此 action
 
         # 驗證母片
         try:
@@ -191,13 +228,32 @@ class ImprovementOrchestrator:
         """執行單一改善動作
 
         所有 improver 都會傳入 self.template_loader,讓它們可以從樣板讀取標題與結構。
+
+        座標會根據 self.slide_width_inch / self.slide_height_inch 動態調整,
+        避免在非標準寬度(如 13.33 in)的 pptx 上出現座標錯位。
         """
+        # === 計算動態座標 ===
+        # 在標準 10 in 寬的 pptx 上,內容區是 9 in (留 0.5 in 邊距)
+        # 在 13.33 in 寬的 pptx 上,內容區應該是 12.33 in (同樣留 0.5 in)
+        # 比例:content_width_ratio = 9/10 = 0.9(對所有寬度都適用)
+        content_width_inch = self.slide_width_inch * 0.9
+        content_height_inch = self.slide_height_inch * 0.7
+
+        # 將座標資訊打包傳給 improver(若 improver 支援)
+        slide_bounds = {
+            "width_inch": self.slide_width_inch,
+            "height_inch": self.slide_height_inch,
+            "content_width_inch": content_width_inch,
+            "content_height_inch": content_height_inch,
+        }
+
         if action == SlideAction.ADD_BASIC_INFO:
             add_basic_info_slide(
                 prs,
                 evaluation=self.evaluation,
                 filename_info=self.filename_info,
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_PROBLEM_DEFINITION:
             dim = self.evaluation.dimension_dict.get(Dimension.PROBLEM_DEF)
@@ -206,6 +262,7 @@ class ImprovementOrchestrator:
                 self.evaluation,
                 dim,
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_ANALYSIS_METHOD:
             dim = self.evaluation.dimension_dict.get(Dimension.METHOD)
@@ -214,6 +271,7 @@ class ImprovementOrchestrator:
                 self.evaluation,
                 dim,
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_EVIDENCE_CHECKLIST:
             dim = self.evaluation.dimension_dict.get(Dimension.EVIDENCE)
@@ -222,6 +280,7 @@ class ImprovementOrchestrator:
                 self.evaluation,
                 dim,
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_ROOT_CAUSE_5_WHY:
             add_statistical_analysis_slide(
@@ -230,6 +289,27 @@ class ImprovementOrchestrator:
                 suggestions=suggestions.get("根因分析", []),
                 variant="5_why",
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
+            )
+        elif action == SlideAction.ADD_ROOT_CAUSE_CONTROL_GROUP:
+            # 控制組 / 對照組分析(v3.1.1 新增,避免 silently skip)
+            add_5why_slide(
+                prs,
+                evaluation=self.evaluation,
+                suggestions=suggestions.get("根因分析", []),
+                variant="control_group",
+                template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
+            )
+        elif action == SlideAction.ADD_ROOT_CAUSE_EVIDENCE:
+            # 證據型根因分析(v3.1.1 新增,避免 silently skip)
+            add_5why_slide(
+                prs,
+                evaluation=self.evaluation,
+                suggestions=suggestions.get("根因分析", []),
+                variant="evidence",
+                template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_ROOT_CAUSE_STATISTICAL:
             add_statistical_analysis_slide(
@@ -238,6 +318,7 @@ class ImprovementOrchestrator:
                 suggestions=suggestions.get("根因分析", []),
                 variant="statistical",
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ADD_PREVENTION_OVERVIEW:
             add_prevention_measures_slide(
@@ -245,6 +326,23 @@ class ImprovementOrchestrator:
                 evaluation=self.evaluation,
                 improvements=self.evaluation_improvements(),
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
+            )
+        elif action == SlideAction.ADD_IQC_STANDARD:
+            # v3.1.1 新增分支(原本 silently skip → 空白頁)
+            add_iqc_standard_slide(
+                prs,
+                evaluation=self.evaluation,
+                template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
+            )
+        elif action == SlideAction.ADD_MONITORING_KM:
+            # v3.1.1 新增分支(原本 silently skip → 空白頁)
+            add_monitoring_km_slide(
+                prs,
+                evaluation=self.evaluation,
+                template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
             )
         elif action == SlideAction.ENHANCE_SUMMARY:
             enhance_summary_section(
@@ -252,6 +350,12 @@ class ImprovementOrchestrator:
                 evaluation=self.evaluation,
                 improvements=self.evaluation_improvements(),
                 template_loader=self.template_loader,
+                slide_bounds=slide_bounds,
+            )
+        else:
+            # 萬一有未實作的 action,明確警告而非 silently skip
+            self.logger.warning(
+                "[%s] 未實作的 action (略過,可能產生空白頁)", action.value
             )
 
     def _needs_improvement(self, dim: Dimension) -> bool:

@@ -32,6 +32,7 @@ def add_evidence_checklist_slide(
     dimension: DimensionScore | None = None,
     template_loader: TemplateLoader | None = None,
     template_name: str = "evidence_checklist",
+    slide_bounds: dict | None = None,
 ) -> None:
     """新增數據與證據支持投影片
 
@@ -41,35 +42,43 @@ def add_evidence_checklist_slide(
         dimension: 該維度的評分(可選)
         template_loader: 樣板載入器(可選)
         template_name: 樣板名稱(預設 'evidence_checklist')
+        slide_bounds: slide 尺寸(英寸),動態適應
     """
-    layout = find_content_layout(prs)
-    slide = prs.slides.add_slide(layout)
+    from ._logging import log_action
+    with log_action("add_evidence_checklist_slide"):
+        layout = find_content_layout(prs)
+        slide = prs.slides.add_slide(layout)
 
-    # 標題 — 優先從樣板讀取
-    title = _get_or_create_title(slide)
-    if template_loader is not None:
-        try:
-            template = resolve_template(template_loader, template_name)
-            title.text_frame.text = template.title
-        except KeyError:
+        # === 動態座標 ===
+        sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+        margin = 0.5
+        content_w = sw - 2 * margin
+
+        # 標題 — 優先從樣板讀取
+        title = _get_or_create_title(slide, slide_bounds)
+        if template_loader is not None:
+            try:
+                template = resolve_template(template_loader, template_name)
+                title.text_frame.text = template.title
+            except KeyError:
+                title.text_frame.text = "數據與證據支持"
+        else:
             title.text_frame.text = "數據與證據支持"
-    else:
-        title.text_frame.text = "數據與證據支持"
 
-    # 1. 對照組 vs 異常品 數據對照表
-    _add_comparison_data_table(slide)
+        # 1. 對照組 vs 異常品 數據對照表
+        _add_comparison_data_table(slide, content_w)
 
-    # 2. 圖片品質與數據追溯性檢查清單
-    _add_evidence_checklist(slide)
+        # 2. 圖片品質與數據追溯性檢查清單
+        _add_evidence_checklist(slide, content_w)
 
 
-def _add_comparison_data_table(slide) -> None:
+def _add_comparison_data_table(slide, content_w: float = 9.0) -> None:
     """加入對照組 vs 異常品數據對照表"""
     gen = ComparisonTableGenerator(
         slide,
         left=0.5,
         top=1.4,
-        width=8.5,
+        width=content_w,
         height=2.2,
     )
     gen.generate(
@@ -87,13 +96,13 @@ def _add_comparison_data_table(slide) -> None:
     )
 
 
-def _add_evidence_checklist(slide) -> None:
+def _add_evidence_checklist(slide, content_w: float = 9.0) -> None:
     """加入圖片品質與數據追溯性檢查清單"""
     gen = ChecklistGenerator(
         slide,
         left=0.5,
         top=3.9,
-        width=8.5,
+        width=content_w,
         height=2.8,
     )
     gen.generate(
@@ -137,10 +146,14 @@ def _add_evidence_checklist(slide) -> None:
     )
 
 
-def _get_or_create_title(slide):
+def _get_or_create_title(slide, slide_bounds: dict | None = None):
     if slide.shapes.title:
         return slide.shapes.title
     for shape in slide.shapes:
         if "title" in shape.name.lower():
             return shape
-    return slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(1))
+    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+    margin = 0.5
+    return slide.shapes.add_textbox(
+        Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1)
+    )

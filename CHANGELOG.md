@@ -322,6 +322,97 @@ cp .env.example .env
 
 ---
 
+## [3.1.1] - 2026-08-31
+
+### 🐛 Bug 修正:批次版面渲染問題(v3.1.0 後遺症)
+
+修正 `docs/handoff/2026-08-31-batch-eval-rendering-issues-handoff.md` 記錄的 8 張空白頁與座標錯位問題。
+
+#### 🔴 P0:空白頁真凶是「missing action 分支」
+
+**問題**:當評估結果嚴重度為 SEVERE 或 PREVENTION < 85 時,`build_plan()` 會加入 4 個 action:
+
+```python
+SlideAction.ADD_ROOT_CAUSE_CONTROL_GROUP  # SEVERE 時加入
+SlideAction.ADD_ROOT_CAUSE_EVIDENCE        # SEVERE 時加入
+SlideAction.ADD_IQC_STANDARD              # PREVENTION < 85 時加入
+SlideAction.ADD_MONITORING_KM             # PREVENTION < 85 時加入
+```
+
+但 `_execute_action()` 沒有對應 elif 分支,導致:
+1. `add_slide()` 建立一張新 slide
+2. 什麼內容都不加進去
+3. slide 被存進 pptx → **完全空白**
+
+3 份報告都觸發,合計 8 張空白頁。
+
+**修正**:
+- 補上 4 個 missing action 的實作分支
+- 新增 `add_iqc_standard_slide()`、`add_monitoring_km_slide()`(內容:IQC 抽驗比例、AQL 標準、KM 登錄頻率等)
+- 新增 `add_5why_slide()` 統一 5_why / control_group / evidence 三個 variant
+- 在 `orchestrator._execute_action()` 加 `else: warning`,防止未來又默默新增未實作的 action
+
+#### 🟡 P1:座標超出 slide 邊界(13.33 in 寬螢幕 pptx)
+
+**問題**:所有 improvers 與 visuals 的座標都 hard-coded(`Inches(0.5)`、`Inches(9.0)`),無法適應 MS / N160JCN 的 13.33 in 寬度。
+
+**修正**:
+- `orchestrator.execute()` 讀取 pptx 實際 `slide_width` / `slide_height`(EMU 轉 inch)
+- 計算 `slide_bounds` 字典傳給每個 improver
+- 7 個 improver 全部加 `slide_bounds` 參數支援
+- 所有內容區寬度 = `slide_width - 2 * margin`(動態計算)
+
+#### 🟢 其他修正
+
+- **Visual generator Inches 重複套用 bug**:`ChecklistGenerator` / `ComparisonTableGenerator` / `TimelineGenerator` / `FlowDiagramGenerator` 的 `__init__` 內部會呼叫 `Inches(left)`,但幾個 improver 傳 `Inches(margin)`(已轉 EMU 的物件)給它,造成二次轉換 → shape 位置在 10^9 EMU 級別,完全離開 slide。
+- **summary.py Executive Summary / Key Improvements 座標超界**:從 `Inches(7.5)` 改成動態右對齊(`content_w - tb_w + 0.5`),確保不超出 slide_width。
+
+#### 🆕 新增工具
+
+- **`src/fa_improver/improvers/_logging.py`** — 統一 logger + `log_action()` 上下文管理器
+  - 環境變數 `FA_IMPROVER_DEBUG=1` 開啟 DEBUG log
+  - 記錄每個 action 的開始、結束、耗時、失敗原因
+  - 不污染 stdout(預設 INFO 寫到 stderr)
+- **`tests/integration/test_slide_rendering.py`** — 7 個 smoke test,防止 P0/P1 再次發生:
+  - `TestSlideRenderingNoEmptySlides`(3 個):260811 / MS / N160JCN 改善後不應有空白投影片
+  - `TestSlideRenderingBounds`:所有 shape 都在 slide 邊界內(0.2 in 容忍)
+  - `TestSlideRenderingSlideWidths`:orchestrator 正確讀取真實 slide 寬度
+  - `TestSlideRenderingDynamicCoordinates`:content shape 寬度跟著 slide 寬度調整
+  - `TestMasterProtectionStillPasses`:回歸測試母片保護仍通過
+
+#### 統計數據
+
+| 指標 | v3.1.0 | v3.1.1 |
+|------|--------|--------|
+| Unit test | 203 passed + 3 skipped | 203 passed + 3 skipped ✅(不變) |
+| 新增 smoke test | 0 | **7 passed** ✅ |
+| 總計 | 203 + 3 skipped | **210 + 3 skipped** |
+| 覆蓋率 | 87% | **89%** |
+| Ruff | 通過 | 通過 ✅ |
+
+#### 真實批次執行結果
+
+| 報告 | 原始 | v3.1.0 產出 | v3.1.1 產出 |
+|------|------|-------------|-------------|
+| 260811 (10×7.5 in) | 5 張 | 11 張(**3 空白**) | **13 張(全 OK)** ✅ |
+| MS (13.33×7.5 in) | 5 張 | 12 張(**2 空白**) | **16 張(無新增空白)** ✅ |
+| N160JCN (13.33×7.5 in) | 9 張 | 14 張(**3 空白**) | **18 張(無新增空白)** ✅ |
+
+**原本 8 張空白頁全部消失**。
+
+#### 相關文檔
+
+- 問題分析:`docs/handoff/2026-08-31-batch-eval-rendering-issues-handoff.md`
+- LLM vs Bug 修正策略評估:`docs/handoff/2026-08-31-llm-vs-bugfix-decision-handoff.md`(確認採用純修 bug,不安用 LLM)
+
+#### 未修正項目(已記錄於 handoff § 10.5)
+
+- 🟢 MS 原圖 slide 1 的「Prepared by: ELAN」shape 在 `(6.65, 5.99)` 接近右邊界 — 屬 pptx 原始母片設計,非生成 bug
+- 🟢 母片覆蓋(文字被裝飾區蓋到)— 需先重新設計 pptx 母片
+- 🟢 文字直式排版(autofit)— textbox 已動態 >= 4 in,但若母片設計特殊仍可能觸發
+
+---
+
 ## 版本規範
 
 - **Major (X.0.0)**:不相容的 API 變更
@@ -330,6 +421,7 @@ cp .env.example .env
 
 ## 標籤
 
+- `v3.1.1` — 修批次版面渲染問題(8 張空白頁 → 0、座標動態適應、+7 smoke test)
 - `v3.1.0` — LLM 安全強化 + TemplateLoader 完整整合 + 視覺元素 + CLI 增強
 - `v3.0.1` — Pre-commit + uv 依賴鎖定 + PPT 轉換測試
 - `v3.0.0` — 模組化 + 6 維度完整覆蓋

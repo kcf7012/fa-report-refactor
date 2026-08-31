@@ -32,6 +32,7 @@ def add_analysis_method_slide(
     dimension: DimensionScore | None = None,
     template_loader: TemplateLoader | None = None,
     template_name: str = "analysis_method",
+    slide_bounds: dict | None = None,
 ) -> None:
     """新增分析方法與流程投影片
 
@@ -41,26 +42,34 @@ def add_analysis_method_slide(
         dimension: 該維度的評分(可選)
         template_loader: 樣板載入器(可選)
         template_name: 樣板名稱(預設 'analysis_method',若無樣板則使用預設標題)
+        slide_bounds: slide 尺寸(英寸),動態適應
     """
-    layout = find_content_layout(prs)
-    slide = prs.slides.add_slide(layout)
+    from ._logging import log_action
+    with log_action("add_analysis_method_slide"):
+        layout = find_content_layout(prs)
+        slide = prs.slides.add_slide(layout)
 
-    # 標題 — 優先從樣板讀取,fallback 到預設
-    title = _get_or_create_title(slide)
-    if template_loader is not None:
-        try:
-            template = resolve_template(template_loader, template_name)
-            title.text_frame.text = template.title
-        except KeyError:
+        # === 動態座標 ===
+        sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+        margin = 0.5
+        content_w = sw - 2 * margin
+
+        # 標題 — 優先從樣板讀取,fallback 到預設
+        title = _get_or_create_title(slide, slide_bounds)
+        if template_loader is not None:
+            try:
+                template = resolve_template(template_loader, template_name)
+                title.text_frame.text = template.title
+            except KeyError:
+                title.text_frame.text = "分析方法與流程"
+        else:
             title.text_frame.text = "分析方法與流程"
-    else:
-        title.text_frame.text = "分析方法與流程"
 
-    # 1. 8D 流程檢查清單
-    _add_8d_checklist(slide)
+        # 1. 8D 流程檢查清單
+        _add_8d_checklist(slide)
 
-    # 2. 分析方法對照表
-    _add_method_comparison_table(slide)
+        # 2. 分析方法對照表
+        _add_method_comparison_table(slide, content_w)
 
 
 def _add_8d_checklist(slide) -> None:
@@ -86,13 +95,15 @@ def _add_8d_checklist(slide) -> None:
     )
 
 
-def _add_method_comparison_table(slide) -> None:
-    """加入分析方法對照表"""
+def _add_method_comparison_table(slide, content_w: float = 9.0) -> None:
+    """加入分析方法對照表(content_w 動態計算於 13.33 in 寬投影片)"""
+    table_left = 0.5 + 4.0 + 0.3
+    table_w = max(4.5, content_w - 4.0 - 0.3)
     gen = ComparisonTableGenerator(
         slide,
-        left=5.0,
+        left=table_left,
         top=1.4,
-        width=4.5,
+        width=table_w,
         height=4.5,
     )
     gen.generate(
@@ -112,10 +123,14 @@ def _add_method_comparison_table(slide) -> None:
     )
 
 
-def _get_or_create_title(slide):
+def _get_or_create_title(slide, slide_bounds: dict | None = None):
     if slide.shapes.title:
         return slide.shapes.title
     for shape in slide.shapes:
         if "title" in shape.name.lower():
             return shape
-    return slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(9), Inches(1))
+    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+    margin = 0.5
+    return slide.shapes.add_textbox(
+        Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1)
+    )

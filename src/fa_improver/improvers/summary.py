@@ -29,6 +29,7 @@ def enhance_summary_section(
     improvements: list[Improvement],
     template_loader: TemplateLoader | None = None,
     template_name: str = "executive_summary",
+    slide_bounds: dict | None = None,
 ) -> None:
     """強化 Summary 區塊
 
@@ -43,33 +44,41 @@ def enhance_summary_section(
         improvements: 改進建議
         template_loader: 樣板載入器(可選)
         template_name: 樣板名稱(預設 'executive_summary')
+        slide_bounds: slide 尺寸(英寸),動態適應
     """
-    # 載入樣板(讀取標題結構)
-    try:
-        template = resolve_template(template_loader, template_name)
-    except KeyError:
-        template = None  # fallback
+    from ._logging import log_action
+    with log_action("enhance_summary_section"):
+        # === 動態座標 ===
+        sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+        margin = 0.5
+        content_w = sw - 2 * margin
 
-    summary_idx = _find_summary_index(prs)
-    if summary_idx == -1:
-        summary_idx = len(prs.slides) - 1
-    if summary_idx < 0:
-        return
+        # 載入樣板(讀取標題結構)
+        try:
+            template = resolve_template(template_loader, template_name)
+        except KeyError:
+            template = None  # fallback
 
-    slide = prs.slides[summary_idx]
+        summary_idx = _find_summary_index(prs)
+        if summary_idx == -1:
+            summary_idx = len(prs.slides) - 1
+        if summary_idx < 0:
+            return
 
-    # 注入 6 維度評分進度條(若有資料)
-    if evaluation.dimensions:
-        _add_dimension_progress(slide, evaluation)
+        slide = prs.slides[summary_idx]
 
-    # 注入 Executive Summary(從樣板讀取 section heading)
-    _add_executive_summary(slide, evaluation, template)
+        # 注入 6 維度評分進度條(若有資料)
+        if evaluation.dimensions:
+            _add_dimension_progress(slide, evaluation, content_w)
 
-    # 注入 Key Improvements
-    _add_key_improvements(slide, improvements, evaluation, template)
+        # 注入 Executive Summary(從樣板讀取 section heading)
+        _add_executive_summary(slide, evaluation, template, content_w)
 
-    # 注入分析優點
-    _add_strengths(slide, evaluation, template)
+        # 注入 Key Improvements
+        _add_key_improvements(slide, improvements, evaluation, template, content_w)
+
+        # 注入分析優點
+        _add_strengths(slide, evaluation, template, content_w)
 
 
 def _find_summary_index(prs: Presentation) -> int:
@@ -83,9 +92,16 @@ def _find_summary_index(prs: Presentation) -> int:
     return -1
 
 
-def _add_executive_summary(slide, evaluation: EvaluationResult, template=None) -> None:
+def _add_executive_summary(
+    slide, evaluation: EvaluationResult, template=None, content_w: float = 9.0
+) -> None:
     """加入 Executive Summary 文字框"""
-    textbox = slide.shapes.add_textbox(Inches(7.5), Inches(3.0), Inches(4.5), Inches(1.5))
+    tb_w = min(4.5, content_w * 0.45)
+    # 動態 left:右對齊,確保不超出 slide_width
+    left = content_w - tb_w + 0.5  # 0.5 是 margin
+    textbox = slide.shapes.add_textbox(
+        Inches(left), Inches(3.0), Inches(tb_w), Inches(1.5)
+    )
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -110,9 +126,14 @@ def _add_key_improvements(
     improvements: list[Improvement],
     evaluation: EvaluationResult,
     template=None,
+    content_w: float = 9.0,
 ) -> None:
     """加入 Key Improvements Required 文字框"""
-    textbox = slide.shapes.add_textbox(Inches(7.5), Inches(4.6), Inches(4.5), Inches(2.0))
+    tb_w = min(4.5, content_w * 0.45)
+    left = content_w - tb_w + 0.5
+    textbox = slide.shapes.add_textbox(
+        Inches(left), Inches(4.6), Inches(tb_w), Inches(2.0)
+    )
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -148,12 +169,16 @@ def _add_key_improvements(
         p.font.size = Pt(10)
 
 
-def _add_strengths(slide, evaluation: EvaluationResult, template=None) -> None:
+def _add_strengths(
+    slide, evaluation: EvaluationResult, template=None, content_w: float = 9.0
+) -> None:
     """加入分析優點與成功驗證"""
     if not evaluation.strengths:
         return
 
-    textbox = slide.shapes.add_textbox(Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0))
+    textbox = slide.shapes.add_textbox(
+        Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0)
+    )
     tf = textbox.text_frame
     tf.word_wrap = True
 
@@ -174,7 +199,9 @@ def _add_strengths(slide, evaluation: EvaluationResult, template=None) -> None:
         p.font.size = Pt(10)
 
 
-def _add_dimension_progress(slide, evaluation: EvaluationResult) -> None:
+def _add_dimension_progress(
+    slide, evaluation: EvaluationResult, content_w: float = 9.0
+) -> None:
     """加入 6 維度評分進度條"""
     if not evaluation.dimensions:
         return
@@ -204,7 +231,7 @@ def _add_dimension_progress(slide, evaluation: EvaluationResult) -> None:
         slide,
         left=1.0,
         top=5.2,
-        width=8.0,
+        width=content_w,
         height=2.0,
     )
     gen.generate(items)
