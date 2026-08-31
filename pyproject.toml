@@ -34,6 +34,11 @@ dev = [
     "hatchling>=1.18",  # Build backend (uv package = true)
 ]
 
+# 構建發布套件(用於 build sdist + wheel)
+build = [
+    "build>=1.0",  # python -m build
+]
+
 # CLI 入口
 [project.scripts]
 fa-improve = "fa_improver.cli:main"

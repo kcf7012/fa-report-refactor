@@ -142,7 +142,7 @@ jobs:
         run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install build dependencies
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra build  # build 套件需要
 
       - name: Build sdist and wheel
         run: .venv/bin/python -m build

@@ -53,3 +53,8 @@ report/*.pptx
 report/*.json
 report/*.txt
 !report/.gitkeep
+
+# Build artifacts(由 CI 動態產生)
+dist/
+build/
+*.egg-info/
