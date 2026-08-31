@@ -47,3 +47,9 @@ Thumbs.db
 
 # WSL metadata
 *:Zone.Identifier
+
+# Report files(隱私 + 由 CI 動態產生)
+report/*.pptx
+report/*.json
+report/*.txt
+!report/.gitkeep
