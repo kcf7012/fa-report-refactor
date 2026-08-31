@@ -1,4 +1,7 @@
-# PPT to PPTX Conversion Guide
+# PPT to PPTX Conversion Guide — v3.0.1
+
+> **本檔描述 `src/fa_improver/utils/ppt_converter.py` 的 .ppt → .pptx 自動轉換系統**
+> **狀態**:✅ v3.0.1 已實作(包含 13 個單元測試於 `tests/unit/test_ppt_converter.py`)
 
 ## Overview
 
@@ -253,7 +256,7 @@ If automatic conversion fails completely:
 ### Basic Usage
 
 ```python
-from ppt_converter import PPTConverter
+from fa_improver.utils.ppt_converter import PPTConverter
 
 converter = PPTConverter()
 pptx_file = converter.convert_ppt_to_pptx("report.ppt")

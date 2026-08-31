@@ -1,4 +1,11 @@
-# Python 虛擬環境最佳實踐指南
+# Python 虛擬環境最佳實踐指南 — v3.0.1 uv 版
+
+> **適用版本**:v3.0.0(2026-08-31)+ v3.0.1(2026-01-15)
+> **工具**:uv 0.12.7+(`uv sync` 取代 `pip + venv`)
+> **環境路徑**:`.venv/`(uv-managed)
+> **狀態**:✅ **已從 v2.x `pip + venv` 遷移到 v3.0 `uv`**
+
+---
 
 ## ⚠️ 為什麼務必使用虛擬環境?
 
@@ -30,11 +37,11 @@
 不知道哪些可以刪 → 系統越來越臃腫
 ```
 
-### 使用虛擬環境的好處
+### 使用 uv 的好處(取代傳統 venv)
 
 ✅ **完全隔離**:
 ```
-每個專案獨立環境
+每個專案獨立 .venv/
 不同版本可以共存
 互不干擾
 ```
@@ -43,170 +50,167 @@
 ```
 全局 Python 保持原始狀態
 專案環境各自管理
-刪除專案 = 刪除環境
+刪除專案 = 刪除 .venv/
 ```
 
 ✅ **無需權限**:
 ```
-創建在用戶目錄
+uv sync 在用戶目錄建立 .venv/
 不需要 sudo/admin
 安全可靠
 ```
 
 ✅ **可重現**:
 ```
-requirements.txt 記錄依賴
+uv.lock 鎖定 51 個依賴套件(精確版本)
 任何人都能重建相同環境
 CI/CD 部署一致
 ```
 
+✅ **極速安裝**(uv 相比 pip 的最大優勢):
+```
+uv sync:通常 < 1 秒(pip 需要數十秒)
+uv pip install:比 pip 快 10-100 倍
+```
+
+✅ **無需 activate**:
+```
+不需 source .venv/bin/activate
+uv run 自動用對的環境
+避免忘記 deactivate 導致污染
+```
+
 ---
 
-## 🚀 虛擬環境完整指南
+## 🚀 uv 環境完整指南(v3.0.1)
 
-### 1. 創建虛擬環境
+### 1. 安裝 uv(一次性)
 
 ```bash
-# 進入專案目錄
-cd ~/.claude/skills/fa-report-improvement
+# Linux / macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 創建虛擬環境 (使用 venv 模組)
-python -m venv venv
+# macOS(Homebrew)
+brew install uv
 
-# 或指定 Python 版本
-python3.9 -m venv venv
+# Windows(PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 創建完成後的目錄結構
+# pip(也可以)
+pip install uv
+```
+
+### 2. 同步依賴(建立 .venv/)
+
+```bash
+# 進入技能包目錄
+cd .agents/skills/fa-report-improvement
+
+# uv 會自動建立 .venv/ 並安裝所有依賴(含 dev、llm)
+uv sync --all-extras
+
+# 完成後的目錄結構
 # fa-report-improvement/
-# ├── venv/              ← 新創建的虛擬環境
-# │   ├── bin/          (Linux/macOS)
-# │   ├── Scripts/      (Windows)
+# ├── .venv/             ← uv-managed 虛擬環境
+# │   ├── bin/           (Linux/macOS)
+# │   ├── Scripts/       (Windows)
 # │   ├── lib/
 # │   └── ...
 # ├── SKILL.md
-# ├── requirements.txt
+# ├── pyproject.toml      ← 主要依賴宣告
+# ├── uv.lock             ← 鎖定 51 個依賴套件
+# ├── requirements.txt    ← pip fallback(向後相容)
 # └── ...
 ```
 
-**只需創建一次**，之後每次使用前啟動即可。
+**只需執行一次**,之後每次使用前 `uv sync`(會增量更新)。
 
-### 2. 啟動虛擬環境
-
-**Linux / macOS**:
-```bash
-source venv/bin/activate
-```
-
-**Windows (CMD)**:
-```cmd
-venv\Scripts\activate.bat
-```
-
-**Windows (PowerShell)**:
-```powershell
-venv\Scripts\Activate.ps1
-```
-
-**成功啟動的標誌**:
-```bash
-# 提示符前會出現 (venv)
-(venv) user@host:~/fa-report-improvement$
-```
-
-### 3. 安裝依賴 (在虛擬環境中)
+### 3. 使用技能包(不需要 activate)
 
 ```bash
-# 確認在虛擬環境中 (看到 venv 前綴)
-(venv) $ pip install -r requirements.txt
+# 方式 A:直接用 uv run(推薦,不用 activate)
+uv run python -m fa_improver input.pptx --eval eval.json --output improved.pptx
 
-# 或執行安裝腳本
-(venv) $ python scripts/install.py
+# 方式 B:明確指定 .venv/bin/python
+.venv/bin/python -m fa_improver input.pptx --eval eval.json --output improved.pptx
+
+# 方式 C:跑測試
+uv run pytest tests/ -v
+
+# 方式 D:用 LLM 評估
+uv run --extra llm python -m fa_improver report.pptx --llm-provider openai
 ```
 
-### 4. 使用 Skill (在虛擬環境中)
+**注意:v3.0.1 不再需要 `source .venv/bin/activate`**(uv 自動管理)
+
+### 4. 退出/切換環境
+
+uv **不需要 deactivate**,每個 `uv run` 都是獨立環境。
+
+### 5. 卸載 uv 環境
 
 ```bash
-(venv) $ python scripts/improve_fa_report.py input.ppt eval.json output.pptx
-```
+# 刪除 .venv/ 即可完整清除
+rm -rf .venv/
 
-### 5. 退出虛擬環境
-
-```bash
-(venv) $ deactivate
-
-# 提示符恢復正常
-user@host:~/fa-report-improvement$
+# 之後 uv sync 會重建
+uv sync
 ```
 
 ---
 
-## 📋 常用命令速查
+## 📋 常用命令速查(v3.0.1 uv 版)
 
 ```bash
-# 創建虛擬環境
-python -m venv venv
+# 安裝所有依賴(含 dev、llm extras)
+uv sync --all-extras
 
-# 啟動虛擬環境
-source venv/bin/activate           # Linux/macOS
-venv\Scripts\activate              # Windows
+# 安裝套件(像 pip add)
+uv add requests
 
-# 檢查當前環境
-which python                       # 查看 Python 路徑
-pip list                          # 查看已安裝套件
+# 加 dev 依賴
+uv add --dev pytest-mock
 
-# 安裝套件
-pip install -r requirements.txt    # 安裝所有依賴
-pip install package_name          # 安裝單個套件
+# 跑腳本
+uv run python -m fa_improver input.pptx --eval eval.json --output out.pptx
 
-# 更新套件
-pip install --upgrade package_name
+# 跑測試
+uv run pytest
 
-# 導出依賴 (用於分享)
-pip freeze > requirements.txt
+# 鎖定更新
+uv lock --upgrade
 
-# 退出虛擬環境
-deactivate
+# 卸載套件
+uv remove requests
 
-# 刪除虛擬環境
-rm -rf venv                       # Linux/macOS
-rmdir /s venv                     # Windows
+# 查看已安裝
+uv pip list
 ```
 
 ---
 
-## 🔍 檢查是否在虛擬環境中
+## 🔍 檢查是否使用 uv 環境
 
-### 方法 1: 查看提示符
-
-```bash
-# 在虛擬環境中
-(venv) user@host:~$
-
-# 不在虛擬環境中
-user@host:~$
-```
-
-### 方法 2: 檢查 Python 路徑
+### 方法 1:查看 .venv/ 目錄
 
 ```bash
-which python
-# 虛擬環境: /home/user/.claude/skills/fa-report-improvement/venv/bin/python
-# 全局環境: /usr/bin/python 或 /usr/local/bin/python
+ls .venv/bin/python
+# 存在 → uv 環境已建立
 ```
+
+### 方法 2:Python 路徑
 
 ```bash
-# Windows
-where python
-# 虛擬環境: C:\Users\user\.claude\skills\fa-report-improvement\venv\Scripts\python.exe
-# 全局環境: C:\Python39\python.exe
+uv run python -c "import sys; print(sys.prefix)"
+# 應指向 /path/to/fa-report-improvement/.venv
 ```
 
-### 方法 3: 使用 Python 代碼
+### 方法 3:使用 Python 代碼
 
 ```python
 import sys
 print(sys.prefix)
-# 虛擬環境: /path/to/fa-report-improvement/venv
+# uv 環境: /path/to/fa-report-improvement/.venv
 # 全局環境: /usr 或 /usr/local
 ```
 
@@ -214,65 +218,51 @@ print(sys.prefix)
 
 ## ⚠️ 常見錯誤與解決
 
-### 錯誤 1: 忘記啟動虛擬環境
+### 錯誤 1:忘記用 `uv run`
 
 **症狀**:
 ```bash
-$ python scripts/install.py
-ModuleNotFoundError: No module named 'pptx'
+$ python -m fa_improver
+ModuleNotFoundError: No module named 'fa_improver'
 ```
 
-**原因**: 在全局環境執行，沒有安裝依賴
+**原因**:在全局環境執行,沒有 uv 環境
 
 **解決**:
 ```bash
-# 啟動虛擬環境
-source venv/bin/activate
+# 用 uv run(自動用 .venv/)
+uv run python -m fa_improver input.pptx --eval eval.json --output out.pptx
 
-# 再執行
-(venv) $ python scripts/install.py
+# 或明確指定
+.venv/bin/python -m fa_improver ...
 ```
 
-### 錯誤 2: PowerShell 執行策略限制 (Windows)
+### 錯誤 2:PowerShell 執行策略限制(Windows)
 
 **症狀**:
 ```
-無法載入檔案 venv\Scripts\Activate.ps1，因為這個系統上已停用指令碼執行。
+無法載入檔案,因為這個系統上已停用指令碼執行。
 ```
 
-**解決**:
-```powershell
-# 方法 1: 暫時允許
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+**解決**:用 `uv run` 取代直接執行 PowerShell 腳本(uv 會處理)。
 
-# 方法 2: 使用 CMD
-venv\Scripts\activate.bat
-
-# 方法 3: 使用繞過
-PowerShell -ExecutionPolicy Bypass -File venv\Scripts\Activate.ps1
-```
-
-### 錯誤 3: 虛擬環境損壞
+### 錯誤 3:.venv/ 損壞
 
 **症狀**:
 ```
-Error: Command '...' returned non-zero exit status 1
+Error: ... returned non-zero exit status 1
 ```
 
 **解決**:
 ```bash
 # 刪除舊環境
-rm -rf venv
+rm -rf .venv/
 
-# 重新創建
-python -m venv venv
-
-# 重新安裝
-source venv/bin/activate
-pip install -r requirements.txt
+# 重建
+uv sync
 ```
 
-### 錯誤 4: pip 版本過舊
+### 錯誤 4:uv 版本過舊
 
 **症狀**:
 ```
@@ -281,237 +271,198 @@ ERROR: Could not find a version that satisfies the requirement...
 
 **解決**:
 ```bash
-# 在虛擬環境中升級 pip
-(venv) $ python -m pip install --upgrade pip
+# 升級 uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 再安裝依賴
-(venv) $ pip install -r requirements.txt
+# 或
+uv self update
 ```
 
 ---
 
-## 🎯 最佳實踐
+## 🎯 最佳實踐(v3.0.1)
 
-### 1. 每個專案一個虛擬環境
+### 1. 每個專案一個 .venv/(由 uv 管理)
 
 ```
 ✅ 好的做法
 ~/projects/
 ├── project-a/
-│   ├── venv/
-│   └── ...
-├── project-b/
-│   ├── venv/
-│   └── ...
-└── project-c/
-    ├── venv/
-    └── ...
-
-❌ 不好的做法
-~/venv/           # 共用虛擬環境 → 依賴衝突
-~/projects/
-├── project-a/
-├── project-b/
-└── project-c/
+│   ├── .venv/          ← uv-managed
+│   ├── pyproject.toml
+│   └── uv.lock
+└── project-b/
+    ├── .venv/          ← uv-managed
+    ├── pyproject.toml
+    └── uv.lock
 ```
 
-### 2. 虛擬環境目錄命名
+### 2. 環境目錄統一用 `.venv/`(隱藏目錄)
 
 ```bash
 # 推薦命名
-venv/            # 標準、簡單
-.venv/           # 隱藏目錄，避免干擾
-env/             # 也可以
-virtualenv/      # 較長但清晰
+.venv/           # uv-managed(統一用這個)
 
 # 避免
+venv/            # 舊 venv 命名,容易跟 uv 混淆
 myenv/           # 不夠標準
-python-env/      # 太長
-test/            # 容易混淆
 ```
 
-### 3. 將虛擬環境加入 .gitignore
+### 3. 將 .venv/ 加入 .gitignore
 
 ```gitignore
 # .gitignore
-venv/
 .venv/
-env/
 *.pyc
 __pycache__/
+uv.lock          # 或 commit,看團隊政策
 ```
 
 **為什麼?**
 - 虛擬環境是本地的
 - 不應該提交到版本控制
-- 每個人根據 requirements.txt 重建
+- 每個人根據 pyproject.toml + uv.lock 重建
 
-### 4. 使用 requirements.txt 管理依賴
+### 4. 用 pyproject.toml + uv.lock 管理依賴
 
 ```bash
-# 導出當前環境依賴
-(venv) $ pip freeze > requirements.txt
+# 自動從 pyproject.toml 同步
+uv sync
 
-# 他人重建環境
-(venv) $ pip install -r requirements.txt
+# 其他人重建環境
+uv sync
 ```
 
-### 5. 定期更新虛擬環境
+### 5. 定期更新依賴
 
 ```bash
-# 更新所有套件
-(venv) $ pip install --upgrade -r requirements.txt
+# 更新 uv.lock
+uv lock --upgrade
 
-# 或重建環境
-deactivate
-rm -rf venv
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+# 同步新版本
+uv sync
 ```
 
 ---
 
-## 📊 虛擬環境 vs 全局安裝對比
+## 📊 uv vs 傳統 pip + venv 對比
 
-| 特性 | 虛擬環境 | 全局安裝 |
-|------|---------|---------|
-| **依賴隔離** | ✅ 完全隔離 | ❌ 共用依賴 |
-| **版本衝突** | ✅ 不會衝突 | ❌ 容易衝突 |
-| **系統乾淨** | ✅ 不污染系統 | ❌ 污染系統 |
-| **需要權限** | ✅ 不需要 | ❌ 需要 sudo/admin |
-| **易於刪除** | ✅ 刪除目錄即可 | ❌ 難以清理 |
-| **可重現** | ✅ 完全可重現 | ❌ 難以重現 |
-| **CI/CD** | ✅ 一致環境 | ❌ 不一致 |
-| **多版本共存** | ✅ 支持 | ❌ 不支持 |
+| 特性 | uv | pip + venv |
+|------|-----|------|
+| **安裝速度** | ⚡ **< 1 秒** | 🐢 數十秒 |
+| **依賴隔離** | ✅ `.venv/` | ✅ `venv/` |
+| **lockfile** | ✅ `uv.lock`(51 套件) | ❌ 需 pip-compile |
+| **版本衝突** | ✅ 不會衝突 | ✅ 不會衝突 |
+| **系統乾淨** | ✅ 不污染系統 | ✅ 不污染系統 |
+| **需要 activate** | ✅ **不需要** | ❌ 每次都要 activate |
+| **需要權限** | ✅ 不需要 | ✅ 不需要 |
+| **CI/CD 一致性** | ✅ 鎖定檔保證 | ⚠️ 需手動管理 |
+| **跨平台** | ✅ 單一二進位 | ✅ |
 
 ---
 
 ## 🛠️ 進階技巧
 
-### 1. 指定 Python 版本
+### 1. 使用額外依賴群組
 
 ```bash
-# 使用特定 Python 版本
-python3.9 -m venv venv
-python3.10 -m venv venv
+# LLM 功能
+uv sync --extra llm
 
-# 驗證版本
-source venv/bin/activate
-python --version
+# 開發工具
+uv sync --extra dev
+
+# 全部
+uv sync --all-extras
 ```
 
-### 2. 複製虛擬環境
+### 2. CI/CD 中的 uv
 
-```bash
-# 導出依賴
-(venv) $ pip freeze > requirements.txt
-
-# 在新機器上重建
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+```yaml
+# GitHub Actions
+- uses: astral-sh/setup-uv@v1
+- run: uv sync --all-extras
+- run: uv run pytest --cov=fa_improver
 ```
 
-### 3. 虛擬環境套在虛擬環境 (不推薦)
+### 3. pre-commit 整合
 
-```bash
-# 不要這樣做!
-(venv1) $ python -m venv venv2  # ❌
-
-# 應該先退出
-(venv1) $ deactivate
-$ python -m venv venv2          # ✅
-```
-
-### 4. 使用別名簡化操作
-
-```bash
-# 添加到 ~/.bashrc 或 ~/.zshrc
-alias venv-activate='source venv/bin/activate'
-alias venv-create='python -m venv venv'
-
-# 使用
-$ venv-create
-$ venv-activate
+```yaml
+# .pre-commit-config.yaml
+- repo: local
+  hooks:
+    - id: pytest
+      entry: .venv/bin/python -m pytest tests/ -q
+      language: system
+      pass_filenames: false
+      always_run: true
 ```
 
 ---
 
-## 📝 FA Report Improvement Skill 特定指南
+## 📝 FA Report Improvement Skill 特定指南(v3.0.1)
 
 ### 標準安裝流程
 
 ```bash
-# 1. 解壓 skill
-cd ~/.claude/skills/
-unzip fa-report-improvement-v2.0-final.skill
-cd fa-report-improvement
+# 1. 進入技能包目錄
+cd .agents/skills/fa-report-improvement
 
-# 2. 創建虛擬環境 (只需一次)
-python -m venv venv
+# 2. 安裝 uv(一次性,若尚未安裝)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 3. 啟動虛擬環境
-source venv/bin/activate  # Linux/macOS
-# 或
-venv\Scripts\activate     # Windows
+# 3. 同步依賴(uv 自動建立 .venv/)
+uv sync --all-extras
 
-# 4. 安裝依賴
-pip install -r requirements.txt
+# 4. 設定 API Key(可選,LLM 模式需要)
+cp .env.example .env
+# 編輯 .env 填入 OPENAI_API_KEY
 
-# 5. 執行安裝腳本 (會檢查虛擬環境)
-python scripts/install.py
+# 5. 使用技能包
+uv run python -m fa_improver input.pptx --eval eval.json --output improved.pptx
 
-# 6. 使用 skill
-python scripts/improve_fa_report.py input.ppt eval.json output.pptx
-
-# 7. 完成後退出
-deactivate
+# 6. 跑測試
+uv run pytest tests/
 ```
 
 ### 每次使用流程
 
 ```bash
 # 進入目錄
-cd ~/.claude/skills/fa-report-improvement
+cd .agents/skills/fa-report-improvement
 
-# 啟動虛擬環境
-source venv/bin/activate
-
-# 使用 skill
-python scripts/improve_fa_report.py ...
-
-# 完成後退出
-deactivate
+# 直接用 uv run(不需要 activate)
+uv run python -m fa_improver input.pptx --eval eval.json --output improved.pptx
 ```
 
 ---
 
 ## 🎓 總結
 
-### 核心原則
+### 核心原則(v3.0.1)
 
-1. **務必使用虛擬環境** - 不是推薦，是必須
-2. **每個專案獨立環境** - 避免依賴衝突
-3. **requirements.txt 管理依賴** - 確保可重現
-4. **虛擬環境不提交** - 每個人重建
-5. **定期更新清理** - 保持環境乾淨
+1. **使用 uv**(取代 pip + venv)— 更快、更安全、更簡單
+2. **每個專案獨立 .venv/** — 避免依賴衝突
+3. **uv.lock 管理依賴** — 確保可重現
+4. **.venv/ 不提交** — 每個人重建
+5. **不需要 activate** — 用 `uv run` 就好
+6. **定期 uv lock --upgrade** — 保持依賴更新
 
 ### 一句話總結
 
-> **使用虛擬環境是 Python 開發的最佳實踐，務必遵守，可以避免 90% 以上的依賴問題!** 🎯
+> **v3.0.1 起改用 uv:一個指令 `uv sync` 取代 `pip install + venv`,更快更穩定!** 🚀
 
 ---
 
 ## 📚 延伸閱讀
 
-- [Python 官方文檔 - venv](https://docs.python.org/3/library/venv.html)
+- [uv 官方文檔](https://docs.astral.sh/uv/)
+- [Python 官方文檔 - venv](https://docs.python.org/3/library/venv.html)(向後相容參考)
 - [pip 用戶指南](https://pip.pypa.io/en/stable/user_guide/)
-- [Python 虛擬環境指南](https://realpython.com/python-virtual-environments-a-primer/)
 
 ---
 
-**務必使用虛擬環境!** 🛡️
+**務必使用 uv!** 🚀
 
-**版本**: 2.1.3
-**最後更新**: 2026-01-28
+**版本**: 3.0.1
+**最後更新**: 2026-01-15
