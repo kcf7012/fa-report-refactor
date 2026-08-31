@@ -338,11 +338,11 @@ class TestSummaryTemplateIntegration:
 
         enhance_summary_section(prs, evaluation, improvements)
 
-        # 注入完成,Summary 投影片應含樣板 section headings
-        slide = prs.slides[0]
-        text = _extract_text_from_slide(slide)
-        assert "Executive Summary" in text
-        assert "Key Improvements" in text
+        # Bug 1 修正後:enhance_summary_section 改為新增獨立 slide,而非疊加
+        # 所以 heading 應出現在「後面新增的 slide」,不是 Slide 0
+        all_text = "\n".join(_extract_text_from_slide(s) for s in prs.slides)
+        assert "Executive Summary" in all_text
+        assert "Key Improvements" in all_text
 
     def test_custom_template_changes_headings(self):
         """自訂樣板覆寫 section headings"""
@@ -382,9 +382,10 @@ class TestSummaryTemplateIntegration:
                 slide.shapes.title.text_frame.text = "Summary"
 
             enhance_summary_section(prs, evaluation, improvements, template_loader=loader)
-            text = _extract_text_from_slide(prs.slides[0])
-            assert "客製 Executive" in text
-            assert "客製 Key Improvements" in text
+            # Bug 1 修正後:heading 應出現在後面新增的 slide
+            all_text = "\n".join(_extract_text_from_slide(s) for s in prs.slides)
+            assert "客製 Executive" in all_text
+            assert "客製 Key Improvements" in all_text
 
 
 class TestOrchestratorTemplateIntegration:

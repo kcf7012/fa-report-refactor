@@ -106,11 +106,17 @@ def _add_basic_info_slide_impl(
             heading = section1.heading if section1 else "優化建議項目"
 
             # 用 textbox 顯示優化建議(在 checklist 下方)
-            body = slide.shapes.add_textbox(
-                Inches(margin), Inches(5.5), Inches(content_w), Inches(1.5)
+            # 使用 safe_textbox 避免 Bug 3(textbox 旋轉)
+            from ._safe_shape import safe_textbox
+
+            body = safe_textbox(
+                slide,
+                left=margin,
+                top=5.5,
+                width=content_w,
+                height=1.5,
             )
             tf = body.text_frame
-            tf.word_wrap = True
 
             p = tf.paragraphs[0]
             p.text = f"[{heading}]"
@@ -124,26 +130,52 @@ def _add_basic_info_slide_impl(
 
 
 def _get_or_create_title(slide, slide_bounds: dict | None = None):
-    if slide.shapes.title:
-        return slide.shapes.title
-    for shape in slide.shapes:
-        if "title" in shape.name.lower():
-            return shape
-    # 動態 title textbox(避免太窄)
+    """取得真實的 title placeholder(Bug 2 修正)
+
+    優先使用 placeholder_format.idx == 0 的 title placeholder,
+    而不是看 shape.name(在 MS / N160JCN 母片會誤抓「按一下」placeholder)。
+
+    若找不到,建立新的 textbox(已套用 rotation=0 與 auto_size=None)。
+    """
+    from ._safe_shape import get_title_placeholder, safe_textbox
+
+    title_ph = get_title_placeholder(slide)
+    if title_ph is not None:
+        return title_ph
+
+    # fallback:建立新 textbox
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     margin = 0.5
-    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
+    return safe_textbox(
+        slide,
+        left=margin,
+        top=0.3,
+        width=sw - 2 * margin,
+        height=1.0,
+    )
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):
+    """取得 body placeholder,優先選擇 rotation == 0 的(Bug 3 修正)
+
+    260811 的某些 layout body placeholder 被預設為旋轉 90°,
+    若直接寫入文字,整頁會變直式。
+    """
+    from ._safe_shape import safe_textbox
+
     for shape in slide.placeholders:
-        if shape.placeholder_format.idx != 0:
+        if shape.placeholder_format.idx != 0 and getattr(shape, "rotation", 0) == 0:
             return shape
+    # fallback:全部 body placeholder 都是旋轉的 → 建立新 textbox
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     sh = slide_bounds["height_inch"] if slide_bounds else 7.5
     margin = 0.5
-    return slide.shapes.add_textbox(
-        Inches(margin), Inches(1.5), Inches(sw - 2 * margin), Inches(sh - 2.0)
+    return safe_textbox(
+        slide,
+        left=margin,
+        top=1.5,
+        width=sw - 2 * margin,
+        height=sh - 2.0,
     )
 
 

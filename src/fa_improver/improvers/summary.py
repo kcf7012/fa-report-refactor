@@ -1,14 +1,19 @@
-"""Summary 強化 — 展開為多張投影片
+"""Summary 強化 — 展開為多張獨立投影片
 
 從 TemplateLoader 載入 'executive_summary' 樣板取得標題與 sections 標題。
 向後相容:若不傳 loader,使用預設載入器。
+
+修正 Bug 1(v3.1.1 殘留問題):
+原本 enhance_summary_section 把 Executive Summary + Key Improvements + ProgressBar
+全部疊加在原 Summary 投影片上,導致互相覆蓋。
+改為新增獨立投影片(在原 Summary 之後新增 3 張 slide)。
 """
 
 from __future__ import annotations
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.util import Inches, Pt
+from pptx.util import Pt
 
 from ..domain.evaluation import EvaluationResult
 from ..domain.suggestion import Improvement
@@ -20,6 +25,7 @@ from ..visuals import (
     ELAN_RED,
     ProgressBarGenerator,
 )
+from ._safe_shape import safe_textbox
 from ._template_helper import resolve_template
 
 
@@ -31,12 +37,17 @@ def enhance_summary_section(
     template_name: str = "executive_summary",
     slide_bounds: dict | None = None,
 ) -> None:
-    """強化 Summary 區塊
+    """強化 Summary 區塊 — 改為新增獨立投影片(不再疊加)
 
-    策略:
-    - 保留原 Summary 投影片不動
-    - 注入 Executive Summary 與 Key Improvements
-    - 若有空間,加入 6 維度評分視覺化
+    Bug 1 修正:原實作把 3 個區塊(Executive Summary + Key Improvements +
+    ProgressBar)全部疊加在原 Summary 投影片上,造成互相覆蓋。
+
+    新實作:在原 Summary 之後新增 3 張獨立投影片:
+    1. Executive Summary slide
+    2. Key Improvements Required slide
+    3. (可選)6 維度評分進度條 slide
+
+    原 Summary 投影片不被修改。
 
     Args:
         prs: 簡報物件
@@ -49,157 +60,159 @@ def enhance_summary_section(
     from ._logging import log_action
 
     with log_action("enhance_summary_section"):
-        # === 動態座標 ===
-        sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-        margin = 0.5
-        content_w = sw - 2 * margin
-
         # 載入樣板(讀取標題結構)
         try:
             template = resolve_template(template_loader, template_name)
         except KeyError:
             template = None  # fallback
 
-        summary_idx = _find_summary_index(prs)
-        if summary_idx == -1:
-            summary_idx = len(prs.slides) - 1
-        if summary_idx < 0:
-            return
+        # Bug 1 修正:新增獨立投影片,而非疊加原 Summary
+        # 注意:順序很重要 — Executive Summary → Key Improvements → Dimension Progress
+        # 這些 slide 會被加在原 Summary 之後的位置
 
-        slide = prs.slides[summary_idx]
+        # 若有 evaluation.summary(非空)才新增 Executive Summary slide
+        # 原本是 is None 才 fallback,現改為空字串也 fallback
+        if evaluation.summary is not None:
+            _new_executive_summary_slide(prs, evaluation, template, slide_bounds)
 
-        # 注入 6 維度評分進度條(若有資料)
+        if improvements:
+            _new_key_improvements_slide(prs, improvements, evaluation, template, slide_bounds)
+
         if evaluation.dimensions:
-            _add_dimension_progress(slide, evaluation, content_w)
-
-        # 注入 Executive Summary(從樣板讀取 section heading)
-        _add_executive_summary(slide, evaluation, template, content_w)
-
-        # 注入 Key Improvements
-        _add_key_improvements(slide, improvements, evaluation, template, content_w)
-
-        # 注入分析優點
-        _add_strengths(slide, evaluation, template, content_w)
+            _new_dimension_progress_slide(prs, evaluation, slide_bounds)
 
 
-def _find_summary_index(prs: Presentation) -> int:
-    """尋找 Summary/總結 投影片"""
-    for i, slide in enumerate(prs.slides):
-        for shape in slide.shapes:
-            if hasattr(shape, "text_frame"):
-                text = shape.text_frame.text
-                if any(kw in text for kw in ["Summary", "總結", "Executive Summary"]):
-                    return i
-    return -1
-
-
-def _add_executive_summary(
-    slide, evaluation: EvaluationResult, template=None, content_w: float = 9.0
+def _new_executive_summary_slide(
+    prs: Presentation,
+    evaluation: EvaluationResult,
+    template=None,
+    slide_bounds: dict | None = None,
 ) -> None:
-    """加入 Executive Summary 文字框"""
-    tb_w = min(4.5, content_w * 0.45)
-    # 動態 left:右對齊,確保不超出 slide_width
-    left = content_w - tb_w + 0.5  # 0.5 是 margin
-    textbox = slide.shapes.add_textbox(Inches(left), Inches(3.0), Inches(tb_w), Inches(1.5))
-    tf = textbox.text_frame
-    tf.word_wrap = True
+    """新增 Executive Summary 獨立 slide
+
+    Args:
+        prs: 簡報物件
+        evaluation: 評估結果
+        template: 樣板(可選)
+        slide_bounds: slide 尺寸
+    """
+    from ..layout.selector import find_content_layout
 
     # 從樣板讀取 section heading
     heading = "Executive Summary"
     if template and len(template.sections) >= 3:
         heading = template.sections[2].heading or heading
 
+    layout = find_content_layout(prs)
+    slide = prs.slides.add_slide(layout)
+
+    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+    margin = 0.5
+    content_w = sw - 2 * margin
+
+    # Title(Bug 2 + Bug 3 修正:用 get_title_placeholder + safe_textbox)
+    from ._safe_shape import clean_unused_placeholders, get_or_create_title
+
+    title = get_or_create_title(slide, slide_bounds)
+    title.text_frame.text = heading
+
+    # Body 內容
+    body = safe_textbox(
+        slide,
+        left=margin,
+        top=1.5,
+        width=content_w,
+        height=sh - 2.0 if (sh := slide_bounds["height_inch"] if slide_bounds else 7.5) else 5.5,
+    )
+    tf = body.text_frame
+    tf.word_wrap = True
+
     p = tf.paragraphs[0]
-    p.text = heading
-    p.font.bold = True
-    p.font.size = Pt(14)
-    p.font.color.rgb = RGBColor(0, 112, 192)
-
-    p = tf.add_paragraph()
     p.text = evaluation.summary or "報告分析詳實,建議補充統計數據以強化結論。"
-    p.font.size = Pt(11)
+    p.font.size = Pt(14)
+    p.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
+
+    # Bug 4 修正:清掉殘留 placeholder
+    clean_unused_placeholders(slide)
 
 
-def _add_key_improvements(
-    slide,
+def _new_key_improvements_slide(
+    prs: Presentation,
     improvements: list[Improvement],
     evaluation: EvaluationResult,
     template=None,
-    content_w: float = 9.0,
+    slide_bounds: dict | None = None,
 ) -> None:
-    """加入 Key Improvements Required 文字框"""
-    tb_w = min(4.5, content_w * 0.45)
-    left = content_w - tb_w + 0.5
-    textbox = slide.shapes.add_textbox(Inches(left), Inches(4.6), Inches(tb_w), Inches(2.0))
-    tf = textbox.text_frame
-    tf.word_wrap = True
+    """新增 Key Improvements Required 獨立 slide"""
+    from ..layout.selector import find_content_layout
 
-    # 從樣板讀取 section heading
     heading = "Key Improvements Required"
     if template and len(template.sections) >= 4:
         heading = template.sections[3].heading or heading
 
-    p = tf.paragraphs[0]
-    p.text = heading
-    p.font.bold = True
-    p.font.size = Pt(14)
-    p.font.color.rgb = RGBColor(255, 0, 0)
+    layout = find_content_layout(prs)
+    slide = prs.slides.add_slide(layout)
 
-    if not improvements:
-        improvements = [
-            Improvement(
-                priority=(
-                    improvements[0].priority
-                    if improvements
-                    else __import__(
-                        "fa_improver.domain.suggestion", fromlist=["Priority"]
-                    ).Priority.MEDIUM
-                ),
-                item="改善建議",
-                suggestion="依評核建議補強缺失項目",
-            )
-        ]
+    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+    margin = 0.5
+    content_w = sw - 2 * margin
+    sh = slide_bounds["height_inch"] if slide_bounds else 7.5
 
-    for imp in improvements[:3]:
-        p = tf.add_paragraph()
-        p.text = f"• {imp.suggestion}"
-        p.font.size = Pt(10)
+    from ._safe_shape import clean_unused_placeholders, get_or_create_title
 
+    title = get_or_create_title(slide, slide_bounds)
+    title.text_frame.text = heading
 
-def _add_strengths(
-    slide, evaluation: EvaluationResult, template=None, content_w: float = 9.0
-) -> None:
-    """加入分析優點與成功驗證"""
-    if not evaluation.strengths:
-        return
-
-    textbox = slide.shapes.add_textbox(Inches(1.6), Inches(4.6), Inches(3.6), Inches(2.0))
-    tf = textbox.text_frame
+    # Body — 條列改善建議
+    body = safe_textbox(
+        slide,
+        left=margin,
+        top=1.5,
+        width=content_w,
+        height=sh - 2.0,
+    )
+    tf = body.text_frame
     tf.word_wrap = True
 
-    # 從樣板讀取 section heading
-    heading = "分析優點與成功驗證"
-    if template and len(template.sections) >= 2:
-        heading = template.sections[1].heading or heading
+    # 第一段是 heading(已用 title,這裡改為空白第一行)
+    for idx, imp in enumerate(improvements[:6]):
+        p = tf.paragraphs[0] if idx == 0 else tf.add_paragraph()
+        p.text = f"• {imp.suggestion}"
+        p.font.size = Pt(13)
+        # Priority 是 str enum(HIGH/MEDIUM/LOW),直接用 name 比較
+        if hasattr(imp, "priority") and imp.priority.name == "HIGH":
+            p.font.color.rgb = RGBColor(255, 0, 0)  # HIGH → 紅色
+        else:
+            p.font.color.rgb = RGBColor(0, 112, 192)  # 其他 → 藍色
 
-    p = tf.paragraphs[0]
-    p.text = heading
-    p.font.bold = True
-    p.font.size = Pt(14)
-    p.font.color.rgb = RGBColor(0, 112, 192)
-
-    for s in evaluation.strengths[:5]:
-        p = tf.add_paragraph()
-        p.text = f"✓ {s}"
-        p.font.size = Pt(10)
+    # Bug 4 修正:清掉殘留 placeholder
+    clean_unused_placeholders(slide)
 
 
-def _add_dimension_progress(slide, evaluation: EvaluationResult, content_w: float = 9.0) -> None:
-    """加入 6 維度評分進度條"""
+def _new_dimension_progress_slide(
+    prs: Presentation,
+    evaluation: EvaluationResult,
+    slide_bounds: dict | None = None,
+) -> None:
+    """新增 6 維度評分進度條獨立 slide"""
+    from ..layout.selector import find_content_layout
+
     if not evaluation.dimensions:
         return
 
-    # 根據分數決定顏色
+    layout = find_content_layout(prs)
+    slide = prs.slides.add_slide(layout)
+
+    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
+    margin = 0.5
+    content_w = sw - 2 * margin
+
+    from ._safe_shape import clean_unused_placeholders, get_or_create_title
+
+    title = get_or_create_title(slide, slide_bounds)
+    title.text_frame.text = "6 維度評分分析"
+
+    # 6 維度進度條
     def color_for_score(score: float):
         if score >= 85:
             return ELAN_GREEN
@@ -219,12 +232,14 @@ def _add_dimension_progress(slide, evaluation: EvaluationResult, content_w: floa
         for dim_score in evaluation.dimensions
     ]
 
-    # 放在原有內容下方(不重疊)
     gen = ProgressBarGenerator(
         slide,
         left=1.0,
-        top=5.2,
+        top=1.8,
         width=content_w,
-        height=2.0,
+        height=4.5,
     )
     gen.generate(items)
+
+    # Bug 4 修正:清掉殘留 placeholder
+    clean_unused_placeholders(slide)

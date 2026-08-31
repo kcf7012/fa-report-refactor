@@ -10,7 +10,6 @@
 from __future__ import annotations
 
 from pptx import Presentation
-from pptx.util import Inches
 
 from ..domain.evaluation import DimensionScore, EvaluationResult
 from ..layout.selector import find_content_layout
@@ -148,11 +147,7 @@ def _add_evidence_checklist(slide, content_w: float = 9.0) -> None:
 
 
 def _get_or_create_title(slide, slide_bounds: dict | None = None):
-    if slide.shapes.title:
-        return slide.shapes.title
-    for shape in slide.shapes:
-        if "title" in shape.name.lower():
-            return shape
-    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
-    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
+    """取得真實的 title placeholder(Bug 2 + Bug 3 修正)"""
+    from ._safe_shape import get_or_create_title
+
+    return get_or_create_title(slide, slide_bounds)

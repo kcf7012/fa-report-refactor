@@ -191,6 +191,7 @@ class ImprovementOrchestrator:
 
         # === 執行每個 action,失敗時記錄但不中斷整個批次 ===
         for action in plan.actions:
+            slides_before = len(prs.slides)
             try:
                 with log_action(action.value, action_idx=plan.actions.index(action) + 1):
                     self._execute_action(prs, action, suggestions)
@@ -202,6 +203,24 @@ class ImprovementOrchestrator:
                     type(e).__name__,
                     e,
                 )
+                continue
+
+            # Bug 4 修正:清除新 slide 上的殘留 placeholder(預設文字「按一下」)
+            slides_after = len(prs.slides)
+            if slides_after > slides_before:
+                # 有新增 slide,清除新加入的 slide 殘留 placeholder
+                from ._safe_shape import clean_unused_placeholders
+
+                for i in range(slides_before, slides_after):
+                    new_slide = prs.slides[i]
+                    cleared = clean_unused_placeholders(new_slide)
+                    if cleared > 0:
+                        self.logger.debug(
+                            "[%s] slide %d 清除了 %d 個殘留 placeholder",
+                            action.value,
+                            i + 1,
+                            cleared,
+                        )
                 # 不 raise,讓批次完成;但 plan 仍記錄此 action
 
         # 驗證母片

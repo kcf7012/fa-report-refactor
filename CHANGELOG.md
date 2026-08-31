@@ -421,7 +421,9 @@ SlideAction.ADD_MONITORING_KM             # PREVENTION < 85 時加入
 
 ## 標籤
 
+- `v3.1.2` — 修 v3.1.1 未修乾淨的 4 類版面渲染問題 + 加視覺驗證腳本
 - `v3.1.1` — 修批次版面渲染問題(8 張空白頁 → 0、座標動態適應、+7 smoke test)
+  - **重要:已知有 4 大類殘留版面渲染問題(見 handoff 2026-09-01)**
 - `v3.1.0` — LLM 安全強化 + TemplateLoader 完整整合 + 視覺元素 + CLI 增強
 - `v3.0.1` — Pre-commit + uv 依賴鎖定 + PPT 轉換測試
 - `v3.0.0` — 模組化 + 6 維度完整覆蓋

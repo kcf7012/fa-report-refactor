@@ -258,23 +258,14 @@ def add_5why_slide(
 
 
 def _get_or_create_title(slide, slide_bounds: dict | None = None):
-    if slide.shapes.title:
-        return slide.shapes.title
-    for shape in slide.shapes:
-        if "title" in shape.name.lower():
-            return shape
-    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
-    return slide.shapes.add_textbox(Inches(margin), Inches(0.3), Inches(sw - 2 * margin), Inches(1))
+    """取得真實的 title placeholder(Bug 2 + Bug 3 修正)"""
+    from ._safe_shape import get_or_create_title
+
+    return get_or_create_title(slide, slide_bounds)
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):
-    for shape in slide.placeholders:
-        if shape.placeholder_format.idx != 0:
-            return shape
-    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    sh = slide_bounds["height_inch"] if slide_bounds else 7.5
-    margin = 0.5
-    return slide.shapes.add_textbox(
-        Inches(margin), Inches(1.5), Inches(sw - 2 * margin), Inches(sh - 2.0)
-    )
+    """取得 body placeholder,優先選擇 rotation == 0 的(Bug 3 修正)"""
+    from ._safe_shape import get_or_create_body
+
+    return get_or_create_body(slide, slide_bounds)
