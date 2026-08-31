@@ -178,7 +178,7 @@ cp .env.example .env
 
 ---
 
-## [3.0.1] - 2026-01-15
+## [3.0.1] - 2026-08-31
 
 ### ✨ 新增(開發者體驗)
 
@@ -213,9 +213,9 @@ cp .env.example .env
 
 ### 📚 文件
 
-- 新增 `docs/handoff/2026-01-15-complete-phase5-todos-handoff.md`(本次任務交接)
+- 新增 `docs/handoff/2026-08-31-complete-phase5-todos-handoff.md`(本次任務交接)
 - 新增 `docs/handoff/2026-08-31-rename-root-dir-handoff.md`(從根目錄 HANDOFF.md 搬入歸檔)
-- 新增 `docs/handoff/2026-01-15-docs-3-exec-modes-handoff.md`(3 種執行方式文件交接)
+- 新增 `docs/handoff/2026-08-31-docs-3-exec-modes-handoff.md`(3 種執行方式文件交接)
 
 ---
 
