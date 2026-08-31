@@ -2,6 +2,10 @@
 
 從 TemplateLoader 載入 'root_cause_5why' 或 'root_cause_statistical' 樣板取得標題。
 向後相容:若不傳 loader,使用預設載入器。
+
+視覺元素:
+- 5-Why variant 使用 FlowDiagramGenerator 呈現推導流程
+- statistical variant 使用文字建議
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ from pptx.util import Inches, Pt
 from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
 from ..templates.loader import TemplateLoader
+from ..visuals import FlowDiagramGenerator
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 
@@ -48,6 +53,10 @@ def add_statistical_analysis_slide(
     # 內容
     if not suggestions:
         suggestions = ["建議加強對照組設定與數據統計驗證以支撐根因發現。"]
+
+    # 5_Why variant:加入 FlowDiagramGenerator 視覺化推導流程
+    if variant == "5_why":
+        _add_5why_flow_diagram(slide, suggestions)
 
     body = _get_or_create_body(slide)
     tf = body.text_frame
@@ -94,6 +103,39 @@ def add_statistical_analysis_slide(
                 p = tf.add_paragraph()
                 p.text = f"• {action}"
                 p.font.size = Pt(12)
+
+
+def _add_5why_flow_diagram(slide, suggestions: list[str]) -> None:
+    """加入 5-Why 推導流程圖
+
+    從 suggestions 或預設 5 個 Why 步驟建立流程圖。
+    """
+    # 預設 5-Why 步驟(若 suggestions 不足)
+    default_steps = [
+        "Why 1: 表層現象",
+        "Why 2: 直接原因",
+        "Why 3: 間接原因",
+        "Why 4: 系統性原因",
+        "Why 5: 根本原因",
+    ]
+
+    # 合併預設 + suggestions(最多 5 個)
+    steps_text = (suggestions + default_steps)[:5]
+    # 簡化文字(移除太長的描述)
+    steps = []
+    for s in steps_text:
+        # 取第一句或前 15 字
+        short = s.split("。")[0][:15] if len(s) > 15 else s
+        steps.append({"name": short, "status": "active"})
+
+    flow_gen = FlowDiagramGenerator(
+        slide,
+        left=Inches(0.5),
+        top=Inches(4.5),
+        width=Inches(9.0),
+        height=Inches(2.5),
+    )
+    flow_gen.generate(steps)
 
 
 def _get_or_create_title(slide):

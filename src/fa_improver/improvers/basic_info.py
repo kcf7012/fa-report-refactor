@@ -2,6 +2,8 @@
 
 從 TemplateLoader 載入 'basic_info' 樣板取得標題與 placeholder items。
 向後相容:若不傳 loader,使用預設載入器。
+
+視覺元素:使用 ChecklistGenerator 呈現基本資料的檢查狀態。
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
 from ..parsers.filename_parser import FilenameInfo
 from ..templates.loader import TemplateLoader
+from ..visuals import ELAN_BLUE, ChecklistGenerator
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 if TYPE_CHECKING:
@@ -56,13 +59,20 @@ def add_basic_info_slide(
     }
     placeholders = get_resolved_placeholders(template, section_index=0, variables=variables)
 
-    body = _get_or_create_body(slide)
-    tf = body.text_frame
-    tf.clear()
-    for item in placeholders:
-        p = tf.add_paragraph()
-        p.text = item
-        p.font.size = _PT(14)
+    # 使用 ChecklistGenerator 呈現基本資料的檢查狀態
+    checklist_items = [
+        {"text": item, "checked": False, "color": ELAN_BLUE}
+        for item in placeholders
+    ]
+    if checklist_items:
+        checklist_gen = ChecklistGenerator(
+            slide,
+            left=Inches(0.5),
+            top=Inches(1.4),
+            width=Inches(9.0),
+            height=Inches(4.0),
+        )
+        checklist_gen.generate(checklist_items)
 
     # 優化建議項目(從 comment 抽取,屬於 section index 1)
     if evaluation.dimensions:
@@ -72,10 +82,18 @@ def add_basic_info_slide(
             section1 = template.sections[1] if len(template.sections) > 1 else None
             heading = section1.heading if section1 else "優化建議項目"
 
-            p = tf.add_paragraph()
-            p.text = f"\n[{heading}]"
+            # 用 textbox 顯示優化建議(在 checklist 下方)
+            body = slide.shapes.add_textbox(
+                _Inches(0.5), _Inches(5.5), _Inches(9.0), _Inches(1.5)
+            )
+            tf = body.text_frame
+            tf.word_wrap = True
+
+            p = tf.paragraphs[0]
+            p.text = f"[{heading}]"
             p.font.bold = True
             p.font.color.rgb = _COLOR(255, 0, 0)
+            p.font.size = _PT(14)
 
             sub = tf.add_paragraph()
             sub.text = f"• {dim.comment}"

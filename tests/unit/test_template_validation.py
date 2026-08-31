@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import pytest
+
 from fa_improver.domain.template import (
     BUILTIN_TEMPLATES,
     SlideTemplate,

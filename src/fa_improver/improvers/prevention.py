@@ -2,6 +2,8 @@
 
 從 TemplateLoader 載入 'prevention_overview' 樣板取得標題與 placeholder items。
 向後相容:若不傳 loader,使用預設載入器。
+
+視覺元素:使用 TimelineGenerator 呈現改善時程。
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from ..domain.evaluation import EvaluationResult
 from ..domain.suggestion import Improvement
 from ..layout.selector import find_content_layout
 from ..templates.loader import TemplateLoader
+from ..visuals import ELAN_BLUE, ELAN_GREEN, ELAN_ORANGE, TimelineGenerator
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 
@@ -89,6 +92,45 @@ def add_prevention_measures_slide(
                 p = tf.add_paragraph()
                 p.text = f"• {item}"
                 p.font.size = Pt(12)
+
+    # 加入 TimelineGenerator 視覺化改善時程
+    _add_prevention_timeline(slide, improvements)
+
+
+def _add_prevention_timeline(slide, improvements: list[Improvement]) -> None:
+    """加入改善時程時間軸
+
+    預設 3 個階段:短期(< 1 個月)、中期(1-3 個月)、長期(> 3 個月)
+    """
+    timeline_items = [
+        {
+            "label": "短期 (< 1 個月)",
+            "timeframe": "D+0 ~ D+30",
+            "color": ELAN_ORANGE,
+            "detail": "建立 SOP 與緊急對策",
+        },
+        {
+            "label": "中期 (1-3 個月)",
+            "timeframe": "D+30 ~ D+90",
+            "color": ELAN_BLUE,
+            "detail": "導入監測設備與人員訓練",
+        },
+        {
+            "label": "長期 (> 3 個月)",
+            "timeframe": "D+90 ~ D+180",
+            "color": ELAN_GREEN,
+            "detail": "成效追蹤與知識庫建立",
+        },
+    ]
+
+    timeline_gen = TimelineGenerator(
+        slide,
+        left=Inches(0.5),
+        top=Inches(5.5),
+        width=Inches(9.0),
+        height=Inches(1.5),
+    )
+    timeline_gen.generate(timeline_items)
 
 
 def _get_or_create_title(slide):

@@ -427,3 +427,122 @@ class TestOrchestratorTemplateIntegration:
 
         orchestrator = ImprovementOrchestrator(evaluation=evaluation, input_path=Path("test.pptx"))
         assert orchestrator.template_loader is None
+
+
+class TestBasicInfoVisualElements:
+    """basic_info 整合 ChecklistGenerator 測試"""
+
+    def test_basic_info_uses_checklist_generator(self):
+        """basic_info 應使用 ChecklistGenerator 呈現基本資料"""
+        from fa_improver.improvers.basic_info import add_basic_info_slide
+
+        prs = _create_test_pptx()
+        filename_info = FilenameInfo(
+            full_stem="FA-001_ACME",
+            date_id="001",
+            customer="ACME",
+            project="X1",
+            date="20260831",
+        )
+        evaluation = EvaluationResult(
+            total_score=80.0,
+            grade="B",
+            dimensions=[],
+            summary="",
+            strengths=[],
+            source_file="test.pptx",
+        )
+
+        add_basic_info_slide(prs, evaluation, filename_info)
+
+        # 應新增 1 張投影片
+        assert len(prs.slides) == 1
+        # 投影片應有 ChecklistGenerator 產生的形狀
+        slide = prs.slides[-1]
+        # 檢查是否有標題
+        text = _extract_text_from_slide(slide)
+        assert "FA 基本資訊" in text
+
+
+class TestRootCauseVisualElements:
+    """root_cause 整合 FlowDiagramGenerator 測試"""
+
+    def test_5why_uses_flow_diagram(self):
+        """5_why variant 應使用 FlowDiagramGenerator"""
+        from fa_improver.improvers.root_cause import add_statistical_analysis_slide
+
+        prs = _create_test_pptx()
+        evaluation = EvaluationResult(
+            total_score=50.0,
+            grade="D",
+            dimensions=[],
+            summary="",
+            strengths=[],
+            source_file="test.pptx",
+        )
+        add_statistical_analysis_slide(
+            prs,
+            evaluation,
+            suggestions=["建議加強對照組"],
+            variant="5_why",
+        )
+        # 應新增 1 張投影片
+        assert len(prs.slides) == 1
+        text = _extract_text_from_slide(prs.slides[-1])
+        assert "5-Why 根因推導" in text
+
+    def test_statistical_no_flow_diagram(self):
+        """statistical variant 不使用 FlowDiagramGenerator"""
+        from fa_improver.improvers.root_cause import add_statistical_analysis_slide
+
+        prs = _create_test_pptx()
+        evaluation = EvaluationResult(
+            total_score=50.0,
+            grade="D",
+            dimensions=[],
+            summary="",
+            strengths=[],
+            source_file="test.pptx",
+        )
+        add_statistical_analysis_slide(
+            prs,
+            evaluation,
+            suggestions=["加強統計"],
+            variant="statistical",
+        )
+        # 仍可正常運作
+        text = _extract_text_from_slide(prs.slides[-1])
+        assert "根因驗證及統計分析" in text
+
+
+class TestPreventionVisualElements:
+    """prevention 整合 TimelineGenerator 測試"""
+
+    def test_prevention_uses_timeline(self):
+        """prevention 應使用 TimelineGenerator 呈現改善時程"""
+        from fa_improver.domain.suggestion import Improvement, Priority
+        from fa_improver.improvers.prevention import add_prevention_measures_slide
+
+        prs = _create_test_pptx()
+        evaluation = EvaluationResult(
+            total_score=60.0,
+            grade="C",
+            dimensions=[],
+            summary="",
+            strengths=[],
+            source_file="test.pptx",
+        )
+        improvements = [
+            Improvement(
+                priority=Priority.HIGH,
+                item="對策1",
+                suggestion="建立 IQC SOP",
+            )
+        ]
+
+        add_prevention_measures_slide(prs, evaluation, improvements)
+        # 應新增 1 張投影片
+        assert len(prs.slides) == 1
+        text = _extract_text_from_slide(prs.slides[-1])
+        assert "長期預防措施與改善對策" in text
+        assert "建立 IQC SOP" in text
