@@ -79,7 +79,7 @@ class LLMEvaluator:
         try:
             data = json.loads(content)
         except json.JSONDecodeError as e:
-            raise LLMError(f"LLM 回應不是有效 JSON:{e}\n" f"內容:{content[:500]}") from e
+            raise LLMError(f"LLM 回應不是有效 JSON:{e}\n內容:{content[:500]}") from e
 
         return self._from_dict(data, response, source_file)
 
@@ -105,7 +105,7 @@ class LLMEvaluator:
                         comment=dim_data.get("comment", ""),
                     )
                 )
-            elif isinstance(dim_data, (int, float)):
+            elif isinstance(dim_data, int | float):
                 dim = self._match_dimension(name)
                 dimensions.append(
                     DimensionScore(

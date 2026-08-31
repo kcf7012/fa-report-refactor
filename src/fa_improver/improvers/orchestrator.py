@@ -292,9 +292,9 @@ class ImprovementOrchestrator:
 
                 improvements.append(
                     Improvement(
-                        priority=Priority.HIGH
-                        if dim_score.gap_severity.value >= 2
-                        else Priority.MEDIUM,
+                        priority=(
+                            Priority.HIGH if dim_score.gap_severity.value >= 2 else Priority.MEDIUM
+                        ),
                         item=dim_score.name.value,
                         suggestion=dim_score.comment,
                     )

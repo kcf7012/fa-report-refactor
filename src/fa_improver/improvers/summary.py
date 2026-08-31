@@ -130,11 +130,13 @@ def _add_key_improvements(
     if not improvements:
         improvements = [
             Improvement(
-                priority=improvements[0].priority
-                if improvements
-                else __import__(
-                    "fa_improver.domain.suggestion", fromlist=["Priority"]
-                ).Priority.MEDIUM,
+                priority=(
+                    improvements[0].priority
+                    if improvements
+                    else __import__(
+                        "fa_improver.domain.suggestion", fromlist=["Priority"]
+                    ).Priority.MEDIUM
+                ),
                 item="改善建議",
                 suggestion="依評核建議補強缺失項目",
             )

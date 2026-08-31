@@ -61,8 +61,7 @@ def add_basic_info_slide(
 
     # 使用 ChecklistGenerator 呈現基本資料的檢查狀態
     checklist_items = [
-        {"text": item, "checked": False, "color": ELAN_BLUE}
-        for item in placeholders
+        {"text": item, "checked": False, "color": ELAN_BLUE} for item in placeholders
     ]
     if checklist_items:
         checklist_gen = ChecklistGenerator(
@@ -83,9 +82,7 @@ def add_basic_info_slide(
             heading = section1.heading if section1 else "優化建議項目"
 
             # 用 textbox 顯示優化建議(在 checklist 下方)
-            body = slide.shapes.add_textbox(
-                _Inches(0.5), _Inches(5.5), _Inches(9.0), _Inches(1.5)
-            )
+            body = slide.shapes.add_textbox(_Inches(0.5), _Inches(5.5), _Inches(9.0), _Inches(1.5))
             tf = body.text_frame
             tf.word_wrap = True
 
