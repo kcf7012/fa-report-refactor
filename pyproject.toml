@@ -29,7 +29,6 @@ dev = [
     "pytest-cov>=4.1",
     "mypy>=1.7",
     "ruff>=0.1",
-    "black>=23.10",
     "pre-commit>=3.5",
     "types-Pillow",
     "hatchling>=1.18",  # Build backend (uv package = true)
@@ -62,11 +61,8 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM"]
-ignore = ["E501"]  # line-too-long(交給 black)
+ignore = ["E501"]  # line-too-long(交給 ruff format)
 
-[tool.black]
-line-length = 100
-target-version = ["py310"]
 
 [tool.mypy]
 python_version = "3.10"

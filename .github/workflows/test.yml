@@ -49,9 +49,6 @@ jobs:
       - name: Ruff format check
         run: .venv/bin/ruff format --check src/ tests/ scripts/
 
-      - name: Black format check
-        run: .venv/bin/black --check src/ tests/ scripts/
-
   # ============================================
   # 測試(主要,Python 矩陣)
   # ============================================
@@ -96,7 +93,7 @@ jobs:
       - name: Check master protection (母片保護)
         run: |
           echo "=== 母片保護驗證 ==="
-          uv run pytest tests/unit/test_master_protection.py -v
+          .venv/bin/pytest tests/unit/test_master_protection.py -v
 
       - name: Verify CLI entry point
         run: |
@@ -148,7 +145,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: .venv/bin/python -m build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -160,7 +157,7 @@ jobs:
       - name: Verify package metadata
         run: |
           echo "=== Package metadata ==="
-          uv run python -c "
+          .venv/bin/python -c "
           import tomllib
           with open('pyproject.toml', 'rb') as f:
               data = tomllib.load(f)

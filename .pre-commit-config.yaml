@@ -15,13 +15,13 @@ repos:
       - id: ruff-format
         types_or: [python, pyi]
 
-  # Black 格式化(備援,與 ruff-format 二擇一即可)
-  - repo: https://github.com/psf/black
-    rev: 23.12.1
-    hooks:
-      - id: black
-        language_version: python3
-        types_or: [python]
+  # Black 格式化(已停用,與 ruff-format 衝突且 ruff-format 是主要格式器)
+  # - repo: https://github.com/psf/black
+  #   rev: 23.12.1
+  #   hooks:
+  #     - id: black
+  #       language_version: python3
+  #       types_or: [python]
 
   # 基本檔案檢查
   - repo: https://github.com/pre-commit/pre-commit-hooks
