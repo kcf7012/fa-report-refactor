@@ -99,6 +99,90 @@ uv run python -m fa_improver input.pptx --eval eval.json --include-dimension-cha
 
 ---
 
+## [3.1.2] - 2026-09-01
+
+### 🐛 Bug 修正:v3.1.1 殘留的 4 類版面渲染問題
+
+延續 handoff `2026-09-01-v311-incomplete-rendering-handoff.md` 的 4 大殘留問題:
+1. 🔴 Bug 1:`enhance_summary_section` 疊加覆蓋(MS-001、N160JCN-001)
+2. 🟡 Bug 2:`_get_or_create_title` 找錯 placeholder(MS / N160JCN 多張)
+3. 🟡 Bug 3:textbox / placeholder 被旋轉 90°(260811 多張)
+4. 🟡 Bug 4:底部 placeholder 殘留(N160JCN 多張)
+
+加上視覺驗證腳本,避免再次發生。
+
+#### 🔴 Bug 1:`enhance_summary_section` 疊加覆蓋
+
+**位置**:`src/fa_improver/improvers/summary.py`(完整重寫)
+
+**修正策略**:
+- 從「疊加在原 Summary 投影片」改為「新增獨立投影片」
+- 在原 Summary 之後新增 3 張 slide(Executive Summary / Key Improvements / 6 維度評分進度條)
+- 原 Summary 投影片不被修改
+
+#### 🟡 Bug 2:`_get_or_create_title` 找錯 placeholder
+
+**位置**:`src/fa_improver/improvers/_safe_shape.py`(新增)
+
+**修正策略**:
+- `get_title_placeholder()` 嚴格用 `placeholder_format.idx == 0`
+- 檢查 `slide_layout.name`,若含「直排」或 "Vertical" 則跳過 layout placeholder
+- fallback 使用 `safe_textbox()`(帶 `rotation=0` 與 `auto_size=None`)
+
+**影響範圍**:7 個 improvers 改用新 helper(`basic_info`、`analysis_method`、`evidence_checklist`、`problem_definition`、`prevention`、`root_cause`、`summary`)
+
+#### 🟡 Bug 3:textbox / placeholder 被旋轉 90°
+
+**位置**:`src/fa_improver/improvers/_safe_shape.py` 的 `get_body_placeholder()`
+
+**根本原因**:
+- 260811 pptx 的某些 layout 名稱含「直排標題及文字」
+- body placeholder 的 `orient='vert'`(垂直中文排版)
+
+**修正策略**:
+- 在 `get_body_placeholder()` 檢查 layout name 並跳過
+- 同時將 placeholder 的 `orient` 改為 `horiz`
+- fallback 用 `safe_textbox()`(`rotation=0`)
+
+#### 🟡 Bug 4:底部 placeholder 殘留
+
+**位置**:`src/fa_improver/improvers/_safe_shape.py` 的 `clean_unused_placeholders()` + `orchestrator.py`
+
+**修正策略**:
+- `clean_unused_placeholders()` 改為「從 slide 移除整個 placeholder 元素」
+- 在 `orchestrator.execute()` 每個 action 結束後自動呼叫
+
+#### 🆕 新增工具
+
+- `src/fa_improver/improvers/_safe_shape.py`(共用 helper,235 行)
+- `scripts/visual_smoke_test.py`(視覺驗證腳本,99 行)
+- `tests/integration/test_visual_quality.py`(5 個新測試)
+
+#### 統計數據
+
+| 指標 | v3.1.1 | v3.1.2 |
+|------|--------|--------|
+| Unit test | 203 passed | 203 passed ✅(不變) |
+| slide_rendering smoke test | 7 passed | 7 passed ✅ |
+| visual_quality smoke test | 0 | **5 passed** ✅ |
+| **總計** | 210 + 3 skipped | **215 + 3 skipped** |
+| 覆蓋率 | 89% | 89% ✅ |
+| Ruff | 通過 | 通過 ✅ |
+
+#### 真實批次執行
+
+| 報告 | 原始 | v3.1.1 產出 | v3.1.2 產出 |
+|------|------|-------------|-------------|
+| 260811 (10×7.5) | 5 張 | 13 張(含 3 張旋轉) | **16 張(無旋轉)** ✅ |
+| MS (13.33×7.5) | 5 張 | 16 張(標題被覆蓋) | **19 張(標題清楚)** ✅ |
+| N160JCN (13.33×7.5) | 9 張 | 18 張(疊加、殘留) | **21 張(獨立 slide)** ✅ |
+
+**視覺驗證圖片數**:56 張(260811: 16 + MS: 19 + N160JCN: 21)
+
+詳見 `docs/handoff/2026-09-01-v312-final-fixes-handoff.md`。
+
+---
+
 ## [3.1.0] - 2026-08-31
 
 ### 🔒 安全強化(LLM PII 個資遮罩)
@@ -184,6 +268,16 @@ uv run python -m fa_improver input.pptx --eval eval.json --include-dimension-cha
 | `cli.py` 覆蓋 | 0% | 78% | +78% |
 | `openai_client.py` 覆蓋 | 80% | 88% | +8% |
 | `llm/redact.py` 覆蓋 | N/A | 95% | 新模組 |
+
+### 📈 效益
+
+v3.1.0 主要提升面向:
+
+- 🛡️ **安全性**:LLM 送出前自動遮罩個資(PII),避免 OpenAI API 讀取敏感資料(電話/Email/中文姓名/IP/工號/身分證/信用卡)
+- 🔄 **可靠性**:LLM 瞬時錯誤自動重試(tenacity 指數退避 1s → 2s → 4s),減少手動 retry
+- 🎨 **可維護性**:7 個 improver 統一從 JSON 樣板讀取標題與 placeholder items,後續修改只需改 JSON 不用改程式
+- 🖥️ **使用者體驗**:CLI 參數從 5 個提升到 8 個(`--api-key`、`--redact-pii`、`--base-url`),支援更多 API 與自訂 endpoint
+- 🧪 **測試涵蓋**:203 個測試通過,覆蓋率 90%(較 v3.0.1 提升 5%)
 
 ### 📚 文件
 
@@ -515,11 +609,13 @@ SlideAction.ADD_MONITORING_KM             # PREVENTION < 85 時加入
 
 ## 標籤
 
-- `v3.1.2` — 修 v3.1.1 未修乾淨的 4 類版面渲染問題 + 加視覺驗證腳本
-- `v3.1.1` — 修批次版面渲染問題(8 張空白頁 → 0、座標動態適應、+7 smoke test)
-  - **重要:已知有 4 大類殘留版面渲染問題(見 handoff 2026-09-01)**
-- `v3.1.0` — LLM 安全強化 + TemplateLoader 完整整合 + 視覺元素 + CLI 增強
-- `v3.0.1` — Pre-commit + uv 依賴鎖定 + PPT 轉換測試
-- `v3.0.0` — 模組化 + 6 維度完整覆蓋
-- `v2.3.0` — 原始 baseline(已過時)
-- `baseline-v2.3.0` — 對照用 baseline tag
+| Tag | 對應版本 | 重點 |
+|-----|---------|------|
+| `v3.1.3` | 2026-09-02 | 修 Kenny 2026-09-02 回饋的 3 個版面問題(標題偏左/重疊/6 維度圖)+ 加 4 個視覺回歸測試 |
+| `v3.1.2` | 2026-09-01 | 修 v3.1.1 殘留的 4 類版面渲染問題(疊加/placeholder/旋轉/殘留)+ 加視覺驗證腳本 |
+| `v3.1.1` | 2026-08-31 | 修批次版面渲染問題(8 張空白頁 → 0、座標動態適應、+7 smoke test)。**注意**:v3.1.2 取代,因有未修問題 |
+| `v3.1.0` | 2026-08-31 | LLM 安全強化(PII 遮罩+tenacity 重試)+ TemplateLoader 完整整合 + 視覺元素 + CLI 增強 |
+| `v3.0.1` | 2026-08-31 | Pre-commit + uv 依賴鎖定 + PPT 轉換測試 |
+| `v3.0.0` | 2026-08-31 | 模組化 + 6 維度完整覆蓋 |
+| `v2.3.0` | 2026-01-28 | 原始 baseline(已過時) |
+| `baseline-v2.3.0` | — | 對照用 baseline tag |
