@@ -103,6 +103,18 @@ def clean_unused_placeholders(slide, *, also_remove: bool = True) -> int:
     return cleared
 
 
+# 標題安全位置常數(避免被母片左上裝飾擋住)
+# 母片通常在 x=0.54-0.97 in 有裝飾(深藍直條 + 淺藍色塊),
+# 所以 title 的 left 必須 >= 1.0 in,推薦 1.2 in
+TITLE_SAFE_LEFT_INCH: float = 1.2
+TITLE_SAFE_TOP_INCH: float = 0.3
+TITLE_SAFE_HEIGHT_INCH: float = 0.85
+
+# body placeholder 最小可用高度(低於此值就 fallback 用 safe_textbox)
+# 「Topic-Numbers」layout 的 body placeholder 只有 0.51 in 高,放不下 heading+bullets
+BODY_MIN_HEIGHT_INCH: float = 1.0
+
+
 def get_title_placeholder(slide):
     """取得真實的 title placeholder
 
@@ -112,6 +124,11 @@ def get_title_placeholder(slide):
 
     同時檢查 layout name 是否含「直排」,若是則跳過 layout 的
     title placeholder(避免中文直排)。
+
+    修正 v3.1.3:當 layout 沒有 idx=0 placeholder 且 placeholder 數量
+    只有 1 個(如「Topic-Numbers」、「Topic」單 placeholder layout),
+    跳過 layout placeholder(改用 safe_textbox fallback),避免
+    title 與該 placeholder 重疊。
 
     Args:
         slide: pptx slide
@@ -145,6 +162,11 @@ def get_title_placeholder(slide):
     for shape in slide.shapes:
         if shape.has_text_frame and "title" in shape.name.lower():
             return shape
+    # v3.1.3 修正:若 layout 沒有 idx=0 placeholder 且只有 1 個 placeholder
+    # (如「Topic-Numbers」、「Topic」),跳過 — 改用 safe_textbox fallback。
+    # 否則 title 與該 placeholder 重疊,造成內容互相覆蓋。
+    if len(list(slide.placeholders)) <= 1:
+        return None
     return None
 
 
@@ -161,6 +183,9 @@ def get_body_placeholder(slide):
     修正策略:
     1. 先檢查 layout name 是否含「直排」→ 若是,直接跳過 layout placeholder
     2. 否則用 layout placeholder,但強制 orient='horiz' 與 rotation=0
+    3. v3.1.3 新增:若 layout placeholder 高度 < BODY_MIN_HEIGHT_INCH(1.0 in),
+       視為「太矮裝不下 heading+bullets」,fallback 讓 get_or_create_body
+       用 safe_textbox 重新建立。
     """
     # 先檢查 layout
     layout_name = slide.slide_layout.name
@@ -170,6 +195,12 @@ def get_body_placeholder(slide):
 
     for shape in slide.placeholders:
         if shape.placeholder_format.idx != 0:
+            # v3.1.3 新增:若 placeholder 高度 < BODY_MIN_HEIGHT_INCH,
+            # 跳過 — 改用 safe_textbox fallback(避免內容溢出)
+            if shape.height is not None:
+                height_inch = shape.height / 914400
+                if height_inch < BODY_MIN_HEIGHT_INCH:
+                    return None
             # 關鍵修正:改為水平 orient(即使原本是 vert)
             import contextlib
 
@@ -187,33 +218,53 @@ def get_body_placeholder(slide):
 
 
 def get_or_create_title(slide, slide_bounds=None):
-    """取得 title placeholder,若無則建立新 textbox(Bug 2 + Bug 3 修正)"""
+    """取得 title placeholder,若無則建立新 textbox(Bug 2 + Bug 3 修正)
+
+    v3.1.3 修正:fallback 的 safe_textbox 從 left=0.5 改成 left=1.2 in,
+    避免被母片左上裝飾(深藍直條 + 淺藍色塊在 x=0.54-0.97)擋住 title 第一個字。
+    height 從 1.0 改成 0.85,更緊湊。
+    """
     ph = get_title_placeholder(slide)
     if ph is not None:
         return ph
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
+    # v3.1.3:左邊界用 TITLE_SAFE_LEFT_INCH(預設 1.2)而非 0.5
+    left = TITLE_SAFE_LEFT_INCH
+    # 確保 left 不超出 slide 寬度
+    if left >= sw - 2.0:
+        left = max(0.5, sw - 9.5)
+    width = sw - left - 0.5
     return safe_textbox(
         slide,
-        left=margin,
-        top=0.3,
-        width=sw - 2 * margin,
-        height=1.0,
+        left=left,
+        top=TITLE_SAFE_TOP_INCH,
+        width=width,
+        height=TITLE_SAFE_HEIGHT_INCH,
     )
 
 
 def get_or_create_body(slide, slide_bounds=None):
-    """取得 body placeholder,若無則建立新 textbox(Bug 3 修正)"""
+    """取得 body placeholder,若無則建立新 textbox(Bug 3 修正)
+
+    v3.1.3 修正:當 layout 的 body placeholder 高度 < BODY_MIN_HEIGHT_INCH
+    (如「Topic-Numbers」layout 的 height=0.51)時,get_body_placeholder()
+    已 return None,所以這裡會 fallback 建立新的 textbox,確保有足夠空間
+    容納 heading + 多個 bullets,避免與 title 區重疊。
+    """
     ph = get_body_placeholder(slide)
     if ph is not None:
         return ph
+
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     sh = slide_bounds["height_inch"] if slide_bounds else 7.5
-    margin = 0.5
+    # 動態 margin:左邊界比 title 多 0.1 in,確保對齊
+    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    if margin < 0.5:
+        margin = 0.5
     return safe_textbox(
         slide,
         left=margin,
         top=1.5,
-        width=sw - 2 * margin,
+        width=sw - margin - 0.5,
         height=sh - 2.0,
     )

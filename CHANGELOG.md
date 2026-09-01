@@ -5,6 +5,100 @@ All notable changes to fa-improver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.3] - 2026-09-02
+
+### 🎨 用戶回饋版面優化 — Kenny 2026-09-02 反饋的 3 個版面問題
+
+#### 1. 修正「簡報標題偏左」(3 份報告)
+
+**位置**:`src/fa_improver/improvers/_safe_shape.py` + `src/fa_improver/improvers/basic_info.py`
+
+**問題**:母片左上角裝飾(深藍直條 + 淺藍色塊位於 x=0.54-0.97 in)
+會擋住 title 的第一個字。
+
+**修正**:
+- 新增常數 `TITLE_SAFE_LEFT_INCH = 1.2`(避免裝飾區)
+- `get_or_create_title()` fallback 的 safe_textbox 從 `left=0.5` 改為 `left=1.2`,height 從 `1.0` 改為 `0.85`
+- `basic_info.py` 的 `_get_or_create_title` 統一改用 `_safe_shape.get_or_create_title`(原本 hard-code margin=0.5)
+
+**影響**:3 份報告 title 全部不再被裝飾擋住
+
+#### 2. 修正「標題與內容重疊」(MS Page 10/13/14、N160JCN Page 12/15/16)
+
+**位置**:`src/fa_improver/improvers/_safe_shape.py`
+
+**問題**:`Topic-Numbers` 與 `2L - Topic` layout 的 body placeholder 高度只有 0.51 in,
+無法容納 heading + 多個 bullets,造成內容溢出到 title 區。
+
+**修正**:
+- 新增常數 `BODY_MIN_HEIGHT_INCH = 1.0`
+- `get_body_placeholder()` 當 layout placeholder 高度 < 1.0 in 時,
+  return None → fallback 用 `safe_textbox` 重新建立 body(高度 = `sh - 2.0`)
+- `get_title_placeholder()` 當 layout 沒有 idx=0 placeholder 且只有 ≤ 1 placeholder 時,
+  return None → fallback 用 `safe_textbox` 避免重疊
+
+**影響**:body 區有充足空間容納 heading + bullets,不再與 title 重疊
+
+#### 3. 移除「6 維度評分分析」slide(預設關閉)
+
+**位置**:`src/fa_improver/improvers/summary.py` + `src/fa_improver/improvers/orchestrator.py` + `src/fa_improver/cli.py`
+
+**問題**:Kenny 2026-09-02 反饋:終端用戶不需要看到「6 維度評分分析」slide
+(這是內部評分指標)。
+
+**修正**:
+- `enhance_summary_section()` 新增 `include_dimension_chart: bool = False` 參數
+  (keyword-only,向後相容)
+- `ImprovementOrchestrator` 新增 `include_dimension_chart` 屬性
+- CLI 新增 `--include-dimension-chart` flag(預設關閉,符合 Kenny 意願)
+
+**用法**:
+```bash
+# 預設不產生「6 維度評分分析」slide
+uv run python -m fa_improver input.pptx --eval eval.json --output out.pptx
+
+# 若需要(opt-in):
+uv run python -m fa_improver input.pptx --eval eval.json --include-dimension-chart --output out.pptx
+```
+
+#### 4. 新增視覺回歸測試(`tests/integration/test_visual_quality.py`)
+
+新增 4 個測試類別 / 4 個測試方法:
+
+- `TestNoTitleDecorationOverlap::test_title_textbox_safe_left` — 驗證 title textbox left >= 1.2 in
+- `TestBodyHasEnoughHeight::test_no_overlap_between_title_and_body` — 驗證 body 不與 title 重疊 + body.height >= 1.0 in
+- `TestDimensionChartOptIn::test_dimension_chart_skipped_by_default` — 驗證預設不出現「6 維度評分分析」slide
+- `TestDimensionChartOptIn::test_dimension_chart_enabled_with_flag` — 驗證 `--include-dimension-chart` 正常運作
+
+#### 5. 統計
+
+| 指標 | v3.1.2 | v3.1.3 |
+|------|--------|--------|
+| Unit test | 203 passed | 203 passed ✅(不變) |
+| slide_rendering smoke test | 7 passed | 7 passed ✅ |
+| visual_quality smoke test | 5 passed | **9 passed** ✅(+4 個 v3.1.3 測試) |
+| **總計** | 215 + 3 skipped | **219 + 3 skipped** |
+| 覆蓋率 | 89% | **90%** ✅ |
+| Ruff | All checks passed | All checks passed ✅ |
+
+#### 6. 真實批次執行
+
+| 報告 | v3.1.2 產出 | v3.1.3 產出 |
+|------|-------------|-------------|
+| 260811 (10×7.5) | 16 張 | **15 張** ✅(少 1 張 dim chart) |
+| MS (13.33×7.5) | 19 張 | **18 張** ✅(少 1 張 dim chart) |
+| N160JCN (13.33×7.5) | 21 張 | **20 張** ✅(少 1 張 dim chart) |
+
+**視覺驗證**:透過 `scripts/visual_smoke_test.py` 產出 53 張 PNG(15+18+20),已人工檢查:
+- ✅ 標題完整顯示(不被裝飾擋住)
+- ✅ 標題與內容不重疊
+- ✅ 母片保護 100% 通過(3 份報告)
+- ✅ 最後一頁不再是「6 維度評分分析」
+
+詳見 `docs/handoff/2026-09-01-v313-user-feedback-fixes-handoff.md`。
+
+---
+
 ## [3.1.0] - 2026-08-31
 
 ### 🔒 安全強化(LLM PII 個資遮罩)

@@ -130,29 +130,14 @@ def _add_basic_info_slide_impl(
 
 
 def _get_or_create_title(slide, slide_bounds: dict | None = None):
-    """取得真實的 title placeholder(Bug 2 修正)
+    """取得真實的 title placeholder(Bug 2 + Bug 3 修正,v3.1.3 統一改用 helper)
 
-    優先使用 placeholder_format.idx == 0 的 title placeholder,
-    而不是看 shape.name(在 MS / N160JCN 母片會誤抓「按一下」placeholder)。
-
-    若找不到,建立新的 textbox(已套用 rotation=0 與 auto_size=None)。
+    v3.1.3 修正:原本 hard-coded margin=0.5,會被母片左上裝飾(0.54-0.97 in)擋住。
+    改為統一呼叫 `_safe_shape.get_or_create_title`,fallback safe_textbox 的 left=1.2 in。
     """
-    from ._safe_shape import get_title_placeholder, safe_textbox
+    from ._safe_shape import get_or_create_title
 
-    title_ph = get_title_placeholder(slide)
-    if title_ph is not None:
-        return title_ph
-
-    # fallback:建立新 textbox
-    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
-    return safe_textbox(
-        slide,
-        left=margin,
-        top=0.3,
-        width=sw - 2 * margin,
-        height=1.0,
-    )
+    return get_or_create_title(slide, slide_bounds)
 
 
 def _get_or_create_body(slide, slide_bounds: dict | None = None):
@@ -160,23 +145,14 @@ def _get_or_create_body(slide, slide_bounds: dict | None = None):
 
     260811 的某些 layout body placeholder 被預設為旋轉 90°,
     若直接寫入文字,整頁會變直式。
-    """
-    from ._safe_shape import safe_textbox
 
-    for shape in slide.placeholders:
-        if shape.placeholder_format.idx != 0 and getattr(shape, "rotation", 0) == 0:
-            return shape
-    # fallback:全部 body placeholder 都是旋轉的 → 建立新 textbox
-    sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    sh = slide_bounds["height_inch"] if slide_bounds else 7.5
-    margin = 0.5
-    return safe_textbox(
-        slide,
-        left=margin,
-        top=1.5,
-        width=sw - 2 * margin,
-        height=sh - 2.0,
-    )
+    v3.1.3 修正:統一改用 `_safe_shape.get_or_create_body`,
+    fallback 條件改為:layout placeholder 高度 < BODY_MIN_HEIGHT_INCH(1.0) 時,
+    才會 fallback 用 safe_textbox,避免內容與 title 區重疊。
+    """
+    from ._safe_shape import get_or_create_body
+
+    return get_or_create_body(slide, slide_bounds)
 
 
 # Helper aliases(縮短程式碼)

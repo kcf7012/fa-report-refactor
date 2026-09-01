@@ -230,3 +230,187 @@ class TestTitlePlaceholderCorrect:
         assert not empty_titles, (
             f"發現 {len(empty_titles)} 張新 slide 的 title 是空的:\n" + "\n".join(empty_titles[:5])
         )
+
+
+# ================================================================
+# v3.1.3 新增測試 — Kenny 2026-09-01 回饋的 3 個版面問題
+# 參見 docs/handoff/2026-09-01-v313-user-feedback-fixes-handoff.md
+# ================================================================
+
+
+class TestNoTitleDecorationOverlap:
+    """v3.1.3 修正後測試:title 不被母片左上裝飾擋住
+
+    Kenny 2026-09-01 反饋:3 份報告的 title 偏左,第一個字被裝飾區擋住。
+    修正策略:get_or_create_title 的 fallback safe_textbox 從 left=0.5
+    改成 left=1.2 in,避開 x=0.54-0.97 的裝飾區(深藍直條+淺藍色塊)。
+    """
+
+    def test_title_textbox_safe_left(self):
+        """新增 slide 的 title textbox 的 left >= 1.0 in(避開裝飾區)"""
+        input_pptx = REPORT_DIR / "MS_Meishan_ADO_445239_260716.pptx"
+        eval_path = REPORT_DIR / "fa_report_MS_Meishan_ADO_445239_260716.json"
+        if not input_pptx.exists() or not eval_path.exists():
+            pytest.skip("需要 MS pptx 與 eval JSON")
+
+        from fa_improver.improvers._safe_shape import TITLE_SAFE_LEFT_INCH
+
+        prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqsafe")
+
+        new_slides = list(prs.slides)[result.original_slide_count :]
+        # 找含 title 文字的 textbox(非 placeholder),檢查 left
+        overlap_titles = []
+        for offset, slide in enumerate(new_slides):
+            slide_num = result.original_slide_count + offset + 1
+            for shape in slide.shapes:
+                # 跳過 placeholder(layout 已對齊裝飾區的為例外)
+                if shape.is_placeholder:
+                    continue
+                # 只看 TEXT_BOX(可控制 left 的)
+                if not shape.has_text_frame:
+                    continue
+                # 只看 title 類:top 在 1.0 in 內 且 height <= 1.0 in
+                # (top >= 1.5 是 body bullet list,不是 title)
+                if shape.top is None or shape.height is None:
+                    continue
+                top_inch = shape.top / 914400
+                height_inch = shape.height / 914400
+                if top_inch > 1.0 or height_inch > 1.0:
+                    continue  # 不是 title(top 在 1.0 以上、或高度超過 1.0)
+                # 此 textbox 是 title
+                left_inch = shape.left / 914400 if shape.left is not None else 0
+                if left_inch < TITLE_SAFE_LEFT_INCH:
+                    overlap_titles.append(
+                        f"Slide {slide_num}: title left={left_inch:.2f} in,"
+                        f"應 >= {TITLE_SAFE_LEFT_INCH} in,"
+                        f"text={shape.text_frame.text[:30]!r}"
+                    )
+
+        assert not overlap_titles, (
+            f"發現 {len(overlap_titles)} 個 title 被裝飾區擋住:\n" + "\n".join(overlap_titles[:5])
+        )
+
+
+class TestBodyHasEnoughHeight:
+    """v3.1.3 修正後測試:body 有足夠高度容納 heading + bullets
+
+    Kenny 2026-09-01 反饋:MS Page 10/13/14、N160JCN Page 12/15/16 的
+    「標題與內容重疊」,因為 layout body placeholder 太矮(0.51 in)。
+    修正策略:get_body_placeholder() 當 height < BODY_MIN_HEIGHT_INCH(1.0 in)
+    時 fallback 用 safe_textbox 重新建立 body,確保有足夠空間。
+    """
+
+    def test_no_overlap_between_title_and_body(self):
+        """新 slide 的 body textbox 不應與 title 重疊
+
+        條件:body.top >= title.bottom(不重疊),且 body.height >= 1.0 in
+        """
+        input_pptx = REPORT_DIR / "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
+        eval_path_candidates = [
+            p for p in REPORT_DIR.glob("fa_report_N160JCN*.json") if "_improved" not in p.name
+        ]
+        if not input_pptx.exists() or not eval_path_candidates:
+            pytest.skip("需要 N160JCN pptx 與 eval JSON")
+        eval_path = eval_path_candidates[0]
+
+        from fa_improver.improvers._safe_shape import BODY_MIN_HEIGHT_INCH
+
+        prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqbody")
+
+        new_slides = list(prs.slides)[result.original_slide_count :]
+        overlap_slides = []
+        for offset, slide in enumerate(new_slides):
+            slide_num = result.original_slide_count + offset + 1
+            # 找 title(textbox 在頂部)
+            title_bottom = None
+            body_top = None
+            body_height = None
+            for shape in slide.shapes:
+                if not shape.has_text_frame:
+                    continue
+                if shape.top is None or shape.height is None:
+                    continue
+                top_inch = shape.top / 914400
+                height_inch = shape.height / 914400
+                if top_inch < 1.5 and height_inch <= 1.2 and title_bottom is None:
+                    title_bottom = top_inch + height_inch
+                elif top_inch >= 1.5 and height_inch >= 1.0 and body_top is None:
+                    body_top = top_inch
+                    body_height = height_inch
+
+            # 條件 1:body.top 應 >= title.bottom(不重疊)
+            if title_bottom is not None and body_top is not None and body_top < title_bottom:
+                overlap_slides.append(
+                    f"Slide {slide_num}: title bottom={title_bottom:.2f} > body top={body_top:.2f}"
+                )
+            # 條件 2:body.height 應 >= BODY_MIN_HEIGHT_INCH
+            if body_height is not None and body_height < BODY_MIN_HEIGHT_INCH:
+                overlap_slides.append(
+                    f"Slide {slide_num}: body height={body_height:.2f} in, 應 >= {BODY_MIN_HEIGHT_INCH} in"
+                )
+
+        assert not overlap_slides, f"發現 {len(overlap_slides)} 個 body 問題:\n" + "\n".join(
+            overlap_slides[:5]
+        )
+
+
+class TestDimensionChartOptIn:
+    """v3.1.3 修正後測試:「6 維度評分分析」slide 預設關閉
+
+    Kenny 2026-09-01 反饋:終端用戶不需要看到「6 維度評分分析」slide
+    (這是內部評分指標)。修正策略:enhance_summary_section 預設不產生此 slide,
+    需透過 --include-dimension-chart CLI flag 顯式開啟。
+    """
+
+    def test_dimension_chart_skipped_by_default(self):
+        """include_dimension_chart=False(預設)時,不應新增「6 維度評分分析」slide"""
+        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
+        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
+        if not input_pptx.exists() or not eval_path.exists():
+            pytest.skip("需要 260811 pptx 與 eval JSON")
+
+        prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqdim")
+
+        # 檢查所有新 slide,確認沒有「6 維度評分分析」
+        new_slides = list(prs.slides)[result.original_slide_count :]
+        dim_chart_slides = []
+        for offset, slide in enumerate(new_slides):
+            slide_num = result.original_slide_count + offset + 1
+            for shape in slide.shapes:
+                if shape.has_text_frame and "6 維度評分分析" in shape.text_frame.text:
+                    dim_chart_slides.append(f"Slide {slide_num}: 發現「6 維度評分分析」slide")
+                    break
+
+        assert not dim_chart_slides, (
+            f"預設不應出現「6 維度評分分析」slide,但發現 {len(dim_chart_slides)} 個:\n"
+            + "\n".join(dim_chart_slides[:3])
+        )
+
+    def test_dimension_chart_enabled_with_flag(self):
+        """include_dimension_chart=True 時,應新增「6 維度評分分析」slide(opt-in 正常)"""
+        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
+        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
+        if not input_pptx.exists() or not eval_path.exists():
+            pytest.skip("需要 260811 pptx 與 eval JSON")
+
+        from fa_improver.improvers.orchestrator import ImprovementOrchestrator
+        from fa_improver.parsers.evaluation_parser import parse_evaluation
+
+        out_path = REPORT_DIR / f"{input_pptx.stem}_vqdim_optin.pptx"
+        evaluation = parse_evaluation(eval_path)
+        prs = Presentation(input_pptx)
+        orchestrator = ImprovementOrchestrator(evaluation, input_pptx, include_dimension_chart=True)
+        result = orchestrator.execute(prs, out_path)
+
+        # 確認有「6 維度評分分析」slide
+        new_slides = list(prs.slides)[result.original_slide_count :]
+        has_dim_chart = False
+        for slide in new_slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame and "6 維度評分分析" in shape.text_frame.text:
+                    has_dim_chart = True
+                    break
+            if has_dim_chart:
+                break
+
+        assert has_dim_chart, "include_dimension_chart=True 時,應有「6 維度評分分析」slide"

@@ -88,6 +88,8 @@ class ImprovementOrchestrator:
         evaluation: EvaluationResult,
         input_path: Path,
         template_loader: TemplateLoader | None = None,
+        *,
+        include_dimension_chart: bool = False,
     ):
         """初始化 orchestrator
 
@@ -95,12 +97,15 @@ class ImprovementOrchestrator:
             evaluation: 評估結果
             input_path: 輸入檔案路徑
             template_loader: 樣板載入器(可選,預設使用內建樣板)
+            include_dimension_chart: 是否在 Summary 區塊加入「6 維度評分分析」slide
+                (v3.1.3 新增,預設 False — Kenny 反饋此 slide 對終端用戶無實質幫助)
         """
         self.evaluation = evaluation
         self.input_path = Path(input_path)
         self.filename_info = parse_filename(self.input_path)
         self.protector = None  # 在 execute 時建立
         self.template_loader = template_loader  # 可能為 None,improvers 會 fallback
+        self.include_dimension_chart = include_dimension_chart
         self.logger = get_logger()
 
         # === Slide 尺寸資訊(從 pptx 讀取,避免 hard-coded)===
@@ -370,6 +375,7 @@ class ImprovementOrchestrator:
                 improvements=self.evaluation_improvements(),
                 template_loader=self.template_loader,
                 slide_bounds=slide_bounds,
+                include_dimension_chart=self.include_dimension_chart,
             )
         else:
             # 萬一有未實作的 action,明確警告而非 silently skip

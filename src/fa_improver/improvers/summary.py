@@ -36,16 +36,18 @@ def enhance_summary_section(
     template_loader: TemplateLoader | None = None,
     template_name: str = "executive_summary",
     slide_bounds: dict | None = None,
+    *,
+    include_dimension_chart: bool = False,
 ) -> None:
     """強化 Summary 區塊 — 改為新增獨立投影片(不再疊加)
 
     Bug 1 修正:原實作把 3 個區塊(Executive Summary + Key Improvements +
     ProgressBar)全部疊加在原 Summary 投影片上,造成互相覆蓋。
 
-    新實作:在原 Summary 之後新增 3 張獨立投影片:
+    新實作:在原 Summary 之後新增 2-3 張獨立投影片:
     1. Executive Summary slide
     2. Key Improvements Required slide
-    3. (可選)6 維度評分進度條 slide
+    3. (可選)6 維度評分進度條 slide — 預設關閉(v3.1.3)
 
     原 Summary 投影片不被修改。
 
@@ -56,6 +58,9 @@ def enhance_summary_section(
         template_loader: 樣板載入器(可選)
         template_name: 樣板名稱(預設 'executive_summary')
         slide_bounds: slide 尺寸(英寸),動態適應
+        include_dimension_chart: 是否包含「6 維度評分分析」slide。
+            預設 False(v3.1.3 起的用戶預設 — Kenny 反饋此 slide
+            對終端用戶無實質幫助,屬內部評分指標)。
     """
     from ._logging import log_action
 
@@ -78,7 +83,8 @@ def enhance_summary_section(
         if improvements:
             _new_key_improvements_slide(prs, improvements, evaluation, template, slide_bounds)
 
-        if evaluation.dimensions:
+        # v3.1.3:6 維度評分分析改為 opt-in,預設關閉
+        if include_dimension_chart and evaluation.dimensions:
             _new_dimension_progress_slide(prs, evaluation, slide_bounds)
 
 

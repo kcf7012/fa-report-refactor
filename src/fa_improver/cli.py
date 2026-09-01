@@ -63,6 +63,11 @@ def main() -> int:
         help="自訂樣板目錄(JSON 樣板)",
     )
     parser.add_argument(
+        "--include-dimension-chart",
+        action="store_true",
+        help="加入「6 維度評分分析」slide(v3.1.3 新增,預設關閉)",
+    )
+    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
@@ -127,7 +132,11 @@ def _run(args) -> int:
 
     # 執行改善
     print("🔧 執行改善...")
-    orchestrator = ImprovementOrchestrator(evaluation, actual_input)
+    orchestrator = ImprovementOrchestrator(
+        evaluation,
+        actual_input,
+        include_dimension_chart=args.include_dimension_chart,
+    )
 
     # 如果有自訂樣板目錄,傳入 TemplateLoader
     if args.template_dir:

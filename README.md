@@ -4,6 +4,10 @@
 
 ## 版本
 
+**v3.1.3** — 修 Kenny 回饋的 3 個版面問題(標題偏左/重疊/6 維度圖)+ 4 個視覺回歸測試
+
+**v3.1.2** — 修 v3.1.1 殘留的 4 類版面渲染問題(疊加/placeholder/旋轉/殘留)+ 5 個視覺品質測試
+
 **v3.1.0** — PII 個資遮罩 + tenacity 重試 + TemplateLoader 完整整合(7/7) + 視覺元素(Checklist/Flow/Timeline)+ CLI 增強(8 參數)+ 101 個新測試(覆蓋率 85% → 90%)
 
 > 更新紀錄見 [CHANGELOG.md](CHANGELOG.md)
@@ -37,6 +41,11 @@ python -m fa_improver report.pptx \
   --eval eval.json \
   --output improved.pptx
 ```
+
+> **v3.1.3 起**:`6 維度評分分析` slide 預設關閉。若需要(opt-in):
+> ```bash
+> python -m fa_improver report.pptx --eval eval.json --include-dimension-chart --output improved.pptx
+> ```
 
 #### 方式 B:用 LLM 直接評估(實驗性)
 
@@ -142,13 +151,16 @@ fa-improve /path/to/report.pptx --eval /path/to/eval.json --output /path/to/outp
 ## 開發
 
 ```bash
-# 跑測試(105 個,含 .ppt 轉換、母片保護、LLM、樣板、視覺元素)
+# 跑測試(219 個,含 .ppt 轉換、母片保護、LLM、樣板、視覺元素、視覺品質)
 .venv/bin/python -m pytest tests/ -q
 
 # 跑特定測試
 .venv/bin/python -m pytest tests/unit/test_visual_generators.py -v
 
-# 完整測試含覆蓋率
+# 跑母片保護測試(AGENTS.md § 9 必跑)
+.venv/bin/python -m pytest tests/unit/test_master_protection.py -v
+
+# 完整測試含覆蓋率(目標 ≥ 90%)
 .venv/bin/python -m pytest tests/ --cov=fa_improver --cov-report=term-missing
 
 # Lint
@@ -158,6 +170,9 @@ ruff check src/
 pip install pre-commit
 pre-commit install
 pre-commit run --all-files
+
+# 視覺驗證腳本(需要 libreoffice + pdftoppm)
+uv run python scripts/visual_smoke_test.py
 
 # 端對端測試(需要 .env)
 python test_api_key.py
@@ -177,9 +192,9 @@ src/fa_improver/      # 主程式碼(35 模組)
 ├── llm/               # LLM Client
 └── utils/             # 工具(PPT 轉換)
 
-tests/                 # 105 個測試(102 passed + 3 skipped)
-├── unit/              # 11 個單元測試模組
-└── integration/       # 端對端測試
+tests/                 # 219 個測試(216 passed + 3 skipped)
+├── unit/              # 12 個單元測試模組(含 test_master_protection.py、test_visual_quality.py)
+└── integration/       # 端對端測試(含 test_visual_quality.py、test_slide_rendering.py)
 
 examples/              # 自訂樣板範例
 references/            # 領域知識文件
