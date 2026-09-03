@@ -25,7 +25,7 @@ from ..visuals import (
     ELAN_RED,
     ProgressBarGenerator,
 )
-from ._safe_shape import safe_textbox
+from ._safe_shape import TITLE_SAFE_LEFT_INCH, safe_textbox
 from ._template_helper import resolve_template
 
 
@@ -113,7 +113,10 @@ def _new_executive_summary_slide(
     slide = prs.slides.add_slide(layout)
 
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
+    # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
+    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    if margin < 0.5:
+        margin = 0.5
     content_w = sw - 2 * margin
 
     # Title(Bug 2 + Bug 3 修正:用 get_title_placeholder + safe_textbox)
@@ -160,7 +163,10 @@ def _new_key_improvements_slide(
     slide = prs.slides.add_slide(layout)
 
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
+    # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
+    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    if margin < 0.5:
+        margin = 0.5
     content_w = sw - 2 * margin
     sh = slide_bounds["height_inch"] if slide_bounds else 7.5
 
@@ -210,7 +216,10 @@ def _new_dimension_progress_slide(
     slide = prs.slides.add_slide(layout)
 
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
+    # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
+    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    if margin < 0.5:
+        margin = 0.5
     content_w = sw - 2 * margin
 
     from ._safe_shape import clean_unused_placeholders, get_or_create_title
