@@ -29,9 +29,17 @@ _SKILL_SRC = Path(__file__).parent.parent.parent / "src"
 if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
-# 強制使用根 report/ 目錄(因為真實 FA 報告放在那裡)
-PROJECT_ROOT = Path("/home/elan/fa-report-refactor")
-REPORT_DIR = PROJECT_ROOT / "report"
+# v3.1.4 修正(稽核 #2):改用動態 fixture resolver
+from tests.integration._fixture_resolver import (  # noqa: E402
+    SYNTHETIC_FIXTURE_DIR,
+    find_project_root,
+    get_report_dir,
+    resolve_eval_json,
+    resolve_input_pptx,
+)
+
+PROJECT_ROOT = find_project_root() or SYNTHETIC_FIXTURE_DIR.parent.parent.parent
+REPORT_DIR = get_report_dir()
 
 
 def _is_empty_slide(slide) -> bool:
@@ -86,8 +94,8 @@ def _find_out_of_bounds_shape(
             if shape.has_text_frame:
                 text_preview = shape.text_frame.text[:30]
             yield (
-                f"{shape.shape_type} at ({left/EMU_PER_INCH:.2f}, {top/EMU_PER_INCH:.2f})"
-                f" size ({width/EMU_PER_INCH:.2f} x {height/EMU_PER_INCH:.2f})"
+                f"{shape.shape_type} at ({left / EMU_PER_INCH:.2f}, {top / EMU_PER_INCH:.2f})"
+                f" size ({width / EMU_PER_INCH:.2f} x {height / EMU_PER_INCH:.2f})"
                 f" text={text_preview!r}"
             )
 
@@ -113,9 +121,9 @@ class TestSlideRenderingNoEmptySlides:
 
     def test_260811_no_empty_slides(self):
         """260811 改善後不應有空白投影片"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
@@ -136,9 +144,9 @@ class TestSlideRenderingNoEmptySlides:
 
     def test_ms_meishan_no_empty_slides(self):
         """MS Meishan 改善後不應有空白投影片"""
-        input_pptx = REPORT_DIR / "MS_Meishan_ADO_445239_260716.pptx"
-        eval_path = REPORT_DIR / "fa_report_MS_Meishan_ADO_445239_260716.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("MS_Meishan_ADO_445239_260716")
+        eval_path = resolve_eval_json("MS_Meishan_ADO_445239_260716")
+        if not input_pptx or not eval_path:
             pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
@@ -150,28 +158,16 @@ class TestSlideRenderingNoEmptySlides:
             if _is_empty_slide(slide):
                 empty_slides.append(slide_num)
 
-        assert not empty_slides, (
-            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:" f" {empty_slides}。"
-        )
+        assert (
+            not empty_slides
+        ), f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
 
     def test_n160jcn_no_empty_slides(self):
         """N160JCN 改善後不應有空白投影片"""
-        # N160JCN 檔名含空格,需 glob 尋找
-        candidates = [
-            c
-            for c in REPORT_DIR.glob("N160JCN-EEK*NG sample*.pptx")
-            if "_improved" not in c.name and "smoke" not in c.name
-        ]
-        if not candidates:
-            pytest.skip("找不到 N160JCN pptx")
-        input_pptx = candidates[0]
-        # 找對應的 eval JSON
-        eval_candidates = [
-            c for c in REPORT_DIR.glob("fa_report_N160JCN*.json") if "_improved" not in c.name
-        ]
-        if not eval_candidates:
-            pytest.skip("找不到 N160JCN eval JSON")
-        eval_path = eval_candidates[0]
+        input_pptx = resolve_input_pptx("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        eval_path = resolve_eval_json("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        if not input_pptx or not eval_path:
+            pytest.skip("找不到 N160JCN pptx 或 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
@@ -182,9 +178,9 @@ class TestSlideRenderingNoEmptySlides:
             if _is_empty_slide(slide):
                 empty_slides.append(slide_num)
 
-        assert not empty_slides, (
-            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片:" f" {empty_slides}。"
-        )
+        assert (
+            not empty_slides
+        ), f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
 
 
 class TestSlideRenderingBounds:
@@ -195,9 +191,9 @@ class TestSlideRenderingBounds:
 
     def test_no_shape_out_of_bounds(self):
         """所有 shape 都應在 slide 邊界內(0.05 in 容忍)"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_smoke_bounds")
@@ -230,8 +226,8 @@ class TestSlideRenderingSlideWidths:
         from fa_improver.domain.evaluation import EvaluationResult
         from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        if not input_pptx.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx:
             pytest.skip("找不到 260811 pptx")
         prs = Presentation(input_pptx)
         real_width = prs.slide_width / 914400
@@ -259,9 +255,9 @@ class TestSlideRenderingDynamicCoordinates:
 
     def test_260811_standard_width_has_dynamic_shapes(self):
         """260811 (10×7.5 in 標準寬度):content shape 應該填滿內容區(>8 in 寬)"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_smoke_dyn")
@@ -291,8 +287,8 @@ class TestMasterProtectionStillPasses:
         """確保母片保護驗證可執行且不拋例外"""
         from fa_improver.layout.protector import MasterProtector
 
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        if not input_pptx.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx:
             pytest.skip("找不到 260811 pptx")
 
         prs = Presentation(input_pptx)

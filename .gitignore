@@ -58,3 +58,10 @@ report/*.txt
 dist/
 build/
 *.egg-info/
+
+# Synthetic fixture 產物(由 CI 跑測試時動態產生,不需 commit)
+tests/integration/_synthetic_fixtures/*_smoke.pptx
+tests/integration/_synthetic_fixtures/*_smoke_bounds.pptx
+tests/integration/_synthetic_fixtures/*_smoke_dyn.pptx
+tests/integration/_synthetic_fixtures/*_vq*.pptx
+tests/integration/_synthetic_fixtures/*_improved*.pptx

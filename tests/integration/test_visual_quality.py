@@ -28,8 +28,17 @@ _SKILL_SRC = Path(__file__).parent.parent.parent / "src"
 if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
-PROJECT_ROOT = Path("/home/elan/fa-report-refactor")
-REPORT_DIR = PROJECT_ROOT / "report"
+# v3.1.4 修正(稽核 #2):改用動態 fixture resolver,不再硬編 /home/elan/fa-report-refactor
+from tests.integration._fixture_resolver import (  # noqa: E402
+    SYNTHETIC_FIXTURE_DIR,
+    find_project_root,
+    get_report_dir,
+    resolve_eval_json,
+    resolve_input_pptx,
+)
+
+PROJECT_ROOT = find_project_root() or SYNTHETIC_FIXTURE_DIR.parent.parent.parent
+REPORT_DIR = get_report_dir()
 
 RESIDUAL_TITLE_MARKERS = ("按一下", "Click to add", "Click here to add")
 
@@ -58,8 +67,8 @@ class TestNoSummaryOverlay:
 
         注意:這裡用 mock — 只跑 enhance_summary_section,不跑整個 orchestrator
         """
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        if not input_pptx.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx:
             pytest.skip("找不到 260811 pptx")
 
         from fa_improver.domain.evaluation import EvaluationResult
@@ -90,8 +99,8 @@ class TestNoSummaryOverlay:
 
     def test_summary_slide_not_overwritten(self):
         """原 Summary slide 的「Summary」標題文字應保留(不被覆蓋)"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        if not input_pptx.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx:
             pytest.skip("找不到 260811 pptx")
 
         from fa_improver.domain.evaluation import EvaluationResult
@@ -122,7 +131,7 @@ class TestNoSummaryOverlay:
                 s.text_frame.text for s in prs.slides[i].shapes if s.has_text_frame
             )
             assert current_text == original_text, (
-                f"Slide {i+1} 的文字被改變了!\n"
+                f"Slide {i + 1} 的文字被改變了!\n"
                 f"原:\n{original_text[:200]}\n"
                 f"現:\n{current_text[:200]}"
             )
@@ -133,9 +142,9 @@ class TestNoTextboxRotation:
 
     def test_new_textboxes_not_rotated(self):
         """新增 slide 的 textbox 都應 rotation == 0"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 260811 pptx 與 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqrot")
@@ -171,13 +180,10 @@ class TestNoResidualPlaceholders:
 
     def test_no_residual_placeholders_in_new_slides(self):
         """新增 slide 不應有「按一下」文字的 placeholder"""
-        input_pptx = REPORT_DIR / "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
-        eval_path_candidates = [
-            p for p in REPORT_DIR.glob("fa_report_N160JCN*.json") if "_improved" not in p.name
-        ]
-        if not input_pptx.exists() or not eval_path_candidates:
+        input_pptx = resolve_input_pptx("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        eval_path = resolve_eval_json("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 N160JCN pptx 與 eval JSON")
-        eval_path = eval_path_candidates[0]
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqres")
 
@@ -204,9 +210,9 @@ class TestTitlePlaceholderCorrect:
 
     def test_new_slides_have_meaningful_titles(self):
         """每張新 slide 的 title placeholder 應有實際標題文字"""
-        input_pptx = REPORT_DIR / "MS_Meishan_ADO_445239_260716.pptx"
-        eval_path = REPORT_DIR / "fa_report_MS_Meishan_ADO_445239_260716.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("MS_Meishan_ADO_445239_260716")
+        eval_path = resolve_eval_json("MS_Meishan_ADO_445239_260716")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 MS pptx 與 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqtit")
@@ -248,9 +254,9 @@ class TestNoTitleDecorationOverlap:
 
     def test_title_textbox_safe_left(self):
         """新增 slide 的 title textbox 的 left >= 1.0 in(避開裝飾區)"""
-        input_pptx = REPORT_DIR / "MS_Meishan_ADO_445239_260716.pptx"
-        eval_path = REPORT_DIR / "fa_report_MS_Meishan_ADO_445239_260716.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("MS_Meishan_ADO_445239_260716")
+        eval_path = resolve_eval_json("MS_Meishan_ADO_445239_260716")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 MS pptx 與 eval JSON")
 
         from fa_improver.improvers._safe_shape import TITLE_SAFE_LEFT_INCH
@@ -305,13 +311,10 @@ class TestBodyHasEnoughHeight:
 
         條件:body.top >= title.bottom(不重疊),且 body.height >= 1.0 in
         """
-        input_pptx = REPORT_DIR / "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
-        eval_path_candidates = [
-            p for p in REPORT_DIR.glob("fa_report_N160JCN*.json") if "_improved" not in p.name
-        ]
-        if not input_pptx.exists() or not eval_path_candidates:
+        input_pptx = resolve_input_pptx("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        eval_path = resolve_eval_json("N160JCN-EEK project 1pcs NG sample analysis report 260810")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 N160JCN pptx 與 eval JSON")
-        eval_path = eval_path_candidates[0]
 
         from fa_improver.improvers._safe_shape import BODY_MIN_HEIGHT_INCH
 
@@ -364,9 +367,9 @@ class TestDimensionChartOptIn:
 
     def test_dimension_chart_skipped_by_default(self):
         """include_dimension_chart=False(預設)時,不應新增「6 維度評分分析」slide"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 260811 pptx 與 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqdim")
@@ -388,9 +391,9 @@ class TestDimensionChartOptIn:
 
     def test_dimension_chart_enabled_with_flag(self):
         """include_dimension_chart=True 時,應新增「6 維度評分分析」slide(opt-in 正常)"""
-        input_pptx = REPORT_DIR / "260811_Kobo_ZHT_RA6080_SPcomFailI.pptx"
-        eval_path = REPORT_DIR / "fa_report_260811_Kobo_ZHT_RA6080_SPcomFailI.json"
-        if not input_pptx.exists() or not eval_path.exists():
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
             pytest.skip("需要 260811 pptx 與 eval JSON")
 
         from fa_improver.improvers.orchestrator import ImprovementOrchestrator
