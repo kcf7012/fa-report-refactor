@@ -5,7 +5,10 @@
 repos:
   # Python 程式碼格式與 lint
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.9
+    # v3.1.4 修正:從 v0.1.9 升級到 v0.16.5,與本機 ruff 0.16.5 對齊
+    # 舊版 hook 行為跟本機不一致,曾造成 6 個 import 排序問題被 commit 進去,
+    # CI 才抓到(見 PR #1 Lint & Format 失敗)。升級後本機與 CI 行為一致。
+    rev: v0.16.5
     hooks:
       # Lint 檢查(快速)
       - id: ruff
