@@ -197,7 +197,7 @@ class TestMasterProtection:
 
     def test_generators_preserve_master(self, sample_pptx):
         """使用視覺元素後母片仍保持"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         from fa_improver.layout.protector import MasterProtector

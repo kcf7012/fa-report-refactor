@@ -115,12 +115,41 @@ def add_statistical_analysis_slide(
                 p.font.size = Pt(12)
 
 
+def _truncate_step_text(text: str, max_chars: int = 15) -> str:
+    """簡化 step 文字:按句號(中英文)切,保留第一句。
+
+    v3.1.4 修正(稽核 #4):
+    - 舊: `s.split("。")[0][:15] if len(s) > 15 else s` 在沒有「。」時
+      會返回整段後再 `[:15]`,從字中間切。
+    - 新: 同時認中英文句號 `。` 與 `.`;若無句號,保留整段(不超過 max_chars)。
+    """
+    if not text:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    # 按中英文句號切
+    for sep in ("。", "."):
+        idx = text.find(sep)
+        if idx > 0:
+            return text[:idx]
+    # 無句號:按 max_chars 切
+    return text[:max_chars]
+
+
 def _add_5why_flow_diagram(
     slide, content_w_or_suggestions=None, content_w: float | None = None
 ) -> None:
     """加入 5-Why 推導流程圖
 
-    從 suggestions 或預設 5 個 Why 步驟建立流程圖。
+    從 suggestions 建立流程圖;若 suggestions 不足 5 個,則只顯示實際有的數量,
+    而非硬補通用「Why 2~5」佔位符。
+
+    v3.1.4 修正(稽核 #4):
+    - 舊:當 suggestions 不足時,把通用 `Why 2: 直接原因` 等佔位補滿 5 個,
+      造成流程圖中後幾個框與前幾個毫無關聯。
+    - 新:優先使用 suggestions(中英句號都認,避免從字中間切);
+      若 suggestions 為空才 fallback 到預設 5 步。
+
     向後相容:可接受 (slide, suggestions) 或 (slide, content_w, suggestions) 三種呼叫方式。
     """
     # 解析參數
@@ -132,23 +161,24 @@ def _add_5why_flow_diagram(
         # 新簽名: (slide, suggestions, content_w)
         suggestions = content_w_or_suggestions or []
         cw = content_w
-    # 預設 5-Why 步驟(若 suggestions 不足)
-    default_steps = [
-        "Why 1: 表層現象",
-        "Why 2: 直接原因",
-        "Why 3: 間接原因",
-        "Why 4: 系統性原因",
-        "Why 5: 根本原因",
-    ]
 
-    # 合併預設 + suggestions(最多 5 個)
-    steps_text = (suggestions + default_steps)[:5]
-    # 簡化文字(移除太長的描述)
-    steps = []
-    for s in steps_text:
-        # 取第一句或前 15 字
-        short = s.split("。")[0][:15] if len(s) > 15 else s
-        steps.append({"name": short, "status": "active"})
+    # 構建 steps:優先使用 suggestions,不足才 fallback
+    if suggestions:
+        # 截斷每個 suggestion 並建立 step dict
+        steps = [
+            {"name": _truncate_step_text(s, max_chars=15), "status": "active"}
+            for s in suggestions[:5]  # 最多 5 個
+        ]
+    else:
+        # suggestions 為空:fallback 到預設 5 個步驟
+        default_steps = [
+            "Why 1: 表層現象",
+            "Why 2: 直接原因",
+            "Why 3: 間接原因",
+            "Why 4: 系統性原因",
+            "Why 5: 根本原因",
+        ]
+        steps = [{"name": s, "status": "active"} for s in default_steps]
 
     flow_gen = FlowDiagramGenerator(
         slide,

@@ -11,7 +11,7 @@ class TestMasterProtection:
 
     def test_snapshot_captures_xml(self, sample_pptx):
         """快照應該擷取母片 XML"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         prs = Presentation(sample_pptx)
@@ -23,7 +23,7 @@ class TestMasterProtection:
 
     def test_no_modification_passes(self, sample_pptx):
         """未修改母片應通過驗證"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         prs = Presentation(sample_pptx)
@@ -34,7 +34,7 @@ class TestMasterProtection:
 
     def test_new_slide_preserves_master(self, sample_pptx):
         """新增投影片不應破壞母片"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         prs = Presentation(sample_pptx)
@@ -51,7 +51,7 @@ class TestMasterProtection:
 
     def test_layout_name_validation(self, sample_pptx):
         """確認 layout 名稱檢查"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         prs = Presentation(sample_pptx)

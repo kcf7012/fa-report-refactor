@@ -1,0 +1,54 @@
+{
+  "total_score": 72.0,
+  "grade": "C",
+  "dimensions": {
+    "基本資訊完整性": {
+      "score": 65,
+      "weight": 15,
+      "comment": "需補充填寫"
+    },
+    "問題描述與定義": {
+      "score": 75,
+      "weight": 15,
+      "comment": "OK"
+    },
+    "分析方法與流程": {
+      "score": 80,
+      "weight": 20,
+      "comment": "OK"
+    },
+    "數據與證據支持": {
+      "score": 70,
+      "weight": 20,
+      "comment": "OK"
+    },
+    "根因分析": {
+      "score": 65,
+      "weight": 20,
+      "comment": "需加強對照組設定"
+    },
+    "改善對策": {
+      "score": 85,
+      "weight": 10,
+      "comment": "OK"
+    }
+  },
+  "improvements": [
+    {
+      "item": "基本資訊",
+      "suggestion": "補充填寫",
+      "priority": "HIGH"
+    },
+    {
+      "item": "根因分析",
+      "suggestion": "需加強對照組設定",
+      "priority": "HIGH"
+    }
+  ],
+  "summary": "這是合成測試報告的 executive summary,完全去識別化。",
+  "strengths": [
+    "完整 8D 分析",
+    "證據齊全"
+  ],
+  "source_file": "synthetic_A_vertical.pptx"
+}
