@@ -3,10 +3,9 @@
 from pathlib import Path
 
 import pytest
-from pptx import Presentation
-
 from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 from fa_improver.parsers.evaluation_parser import parse_evaluation
+from pptx import Presentation
 
 
 class TestFullWorkflow:
@@ -14,7 +13,7 @@ class TestFullWorkflow:
 
     def test_improve_ms_meishan(self, sample_pptx, sample_eval_json, tmp_path):
         """測試 MS Meishan 報告改善"""
-        if not sample_pptx.exists() or not sample_eval_json.exists():
+        if sample_pptx is None or sample_eval_json is None:
             pytest.skip("範例檔案不存在")
 
         evaluation = parse_evaluation(sample_eval_json)
@@ -44,7 +43,7 @@ class TestFullWorkflow:
             / "report"
             / "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
         )
-        if not sample_eval_txt.exists() or not n160_pptx.exists():
+        if sample_eval_txt is None or not n160_pptx.exists():
             pytest.skip("範例檔案不存在")
 
         evaluation = parse_evaluation(sample_eval_txt)

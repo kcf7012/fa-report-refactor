@@ -1,7 +1,6 @@
 """評估解析器測試"""
 
 import pytest
-
 from fa_improver.domain.evaluation import Dimension, GapSeverity
 from fa_improver.parsers.evaluation_parser import EvaluationParser
 
@@ -74,7 +73,7 @@ class TestTxtParser:
 
     def test_parse_real_txt(self, sample_eval_txt):
         """測試真實 TXT 解析"""
-        if not sample_eval_txt.exists():
+        if sample_eval_txt is None:
             pytest.skip("TXT 樣本不存在")
 
         parser = EvaluationParser()
@@ -111,7 +110,7 @@ class TestAutoDetection:
 
     def test_parse_json_file(self, sample_eval_json, tmp_path):
         """測試從 JSON 檔案自動解析"""
-        if not sample_eval_json.exists():
+        if sample_eval_json is None:
             pytest.skip("JSON 樣本不存在")
 
         parser = EvaluationParser()
@@ -121,7 +120,7 @@ class TestAutoDetection:
 
     def test_parse_txt_file(self, sample_eval_txt):
         """測試從 TXT 檔案自動解析"""
-        if not sample_eval_txt.exists():
+        if sample_eval_txt is None:
             pytest.skip("TXT 樣本不存在")
 
         parser = EvaluationParser()

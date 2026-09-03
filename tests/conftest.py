@@ -100,18 +100,27 @@ def fixtures_dir() -> Path:
 
 
 @pytest.fixture
-def sample_pptx() -> Path:
-    """取第一個原始(非 _improved) pptx 檔案"""
+def sample_pptx() -> Path | None:
+    """取第一個原始(非 _improved) pptx 檔案
+
+    v3.1.4 修正:找不到時回傳 None(而非 Path(""))。
+    原因:Path("").exists() 永遠回傳 True,Path("").resolve() 解析成當前 cwd,
+    會導致全新 clone 環境跑 pytest 時,IsADirectoryError 而不是乾淨 skip。
+    呼叫端須用 `if sample_pptx is None: pytest.skip(...)` 判斷。
+    """
     candidates = _REPORT_FILES.get("pptx", [])
     originals = [p for p in candidates if "_improved" not in p.name]
     if originals:
         return originals[0]
-    return candidates[0] if candidates else Path("")
+    return None
 
 
 @pytest.fixture
-def sample_eval_json() -> Path:
-    """取優先符合的 eval JSON 檔案 (fa_report_*.json, 排除 _improved.*)"""
+def sample_eval_json() -> Path | None:
+    """取優先符合的 eval JSON 檔案 (fa_report_*.json, 排除 _improved.*)
+
+    v3.1.4 修正:見 sample_pptx docstring。
+    """
     candidates = _REPORT_FILES.get("json", [])
     # 優先選擇 fa_report_ 開頭的 (評估檔),排除 _improved (改善輸出)
     eval_files = [
@@ -119,19 +128,22 @@ def sample_eval_json() -> Path:
     ]
     if eval_files:
         return eval_files[0]
-    return candidates[0] if candidates else Path("")
+    return candidates[0] if candidates else None
 
 
 @pytest.fixture
-def sample_eval_txt() -> Path:
-    """取優先符合的 eval TXT 檔案 (fa_report_*.txt, 排除 _improved)"""
+def sample_eval_txt() -> Path | None:
+    """取優先符合的 eval TXT 檔案 (fa_report_*.txt, 排除 _improved)
+
+    v3.1.4 修正:見 sample_pptx docstring。
+    """
     candidates = _REPORT_FILES.get("txt", [])
     eval_files = [
         p for p in candidates if p.name.startswith("fa_report_") and "_improved" not in p.name
     ]
     if eval_files:
         return eval_files[0]
-    return candidates[0] if candidates else Path("")
+    return candidates[0] if candidates else None
 
 
 @pytest.fixture

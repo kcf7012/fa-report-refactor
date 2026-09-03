@@ -3,7 +3,6 @@
 import json
 
 import pytest
-
 from fa_improver.domain.evaluation import EvaluationResult
 from fa_improver.llm.evaluator import LLMEvaluator
 from fa_improver.llm.mock_client import MockLLMClient
@@ -86,7 +85,7 @@ class TestLLMEvaluator:
 
     def test_evaluate_pptx(self, sample_pptx):
         """評估真實 pptx 檔案"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         client = MockLLMClient()
@@ -102,7 +101,7 @@ class TestLLMEvaluator:
 
     def test_extract_content(self, sample_pptx):
         """測試 pptx 內容萃取"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         client = MockLLMClient()
@@ -118,7 +117,7 @@ class TestLLMEvaluatorIntegration:
 
     def test_full_workflow(self, sample_pptx):
         """端對端流程"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         json_response = json.dumps(

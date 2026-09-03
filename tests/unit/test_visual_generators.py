@@ -1,8 +1,6 @@
 """視覺元素生成器測試"""
 
 import pytest
-from pptx import Presentation
-
 from fa_improver.visuals import (
     ELAN_BLUE,
     ELAN_GREEN,
@@ -12,6 +10,7 @@ from fa_improver.visuals import (
     ProgressBarGenerator,
     TimelineGenerator,
 )
+from pptx import Presentation
 
 
 @pytest.fixture
@@ -197,7 +196,7 @@ class TestMasterProtection:
 
     def test_generators_preserve_master(self, sample_pptx):
         """使用視覺元素後母片仍保持"""
-        if not sample_pptx.exists():
+        if sample_pptx is None:
             pytest.skip("範例 pptx 不存在")
 
         from fa_improver.layout.protector import MasterProtector
