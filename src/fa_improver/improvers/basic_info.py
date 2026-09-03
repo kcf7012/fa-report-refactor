@@ -19,6 +19,7 @@ from ..layout.selector import find_content_layout
 from ..parsers.filename_parser import FilenameInfo
 from ..templates.loader import TemplateLoader
 from ..visuals import ELAN_BLUE, ChecklistGenerator
+from ._safe_shape import TITLE_SAFE_LEFT_INCH
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 if TYPE_CHECKING:
@@ -64,7 +65,12 @@ def _add_basic_info_slide_impl(
 
     # === 動態座標(v3.1.1 修正)===
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    margin = 0.5
+    # v3.1.4 回歸修正:Kenny 2026-09-03 回饋「標題又偏左」
+    # 根因:title 用 _get_or_create_title (fallback left=1.2 in 正確),
+    # 但 ChecklistGenerator 與 safe_textbox 用 margin=0.5 從 0.5 in 開始,
+    # 視覺上看起來「標題偏左」(實際是其他內容從更左開始)。
+    # 修正:統一用 TITLE_SAFE_LEFT_INCH(1.2),與 _safe_shape 對齊。
+    margin = TITLE_SAFE_LEFT_INCH  # v3.1.4 從 0.5 改為 1.2
     content_w = sw - 2 * margin
 
     # 載入樣板
