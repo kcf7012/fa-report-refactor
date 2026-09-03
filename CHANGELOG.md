@@ -5,6 +5,100 @@ All notable changes to fa-improver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.4] - 2026-09-03
+
+### 🔍 稽核修正與測試誠實化
+
+依據柔伊 2026-09-02 獨立稽核報告 (`docs/handoff/2026-09-02-fa-report-refactor-audit-handoff.md`),
+本次 release 修正了 3 項稽核揭露的問題,並把測試結果的「誠實度」提升一個層級。
+
+#### 1. 🟡 conftest fixture 陷阱修正(`tests/conftest.py`)
+
+**稽核發現**:全新 clone 環境跑 `pytest tests/` 會爆 `IsADirectoryError: Is a directory: '.'`。
+**根因**:`sample_pptx/sample_eval_json/sample_eval_txt` 在找不到檔案時回傳 `Path("")`,
+而 `Path("").exists()` 永遠回傳 True,`Path("").resolve()` 解析成當前 cwd。
+
+**修法**:
+- Fixture 找不到時改回傳 `None`(return type 改為 `Path | None`)
+- 13 處呼叫端把 `if not X.exists(): pytest.skip(...)` 改為 `if X is None: pytest.skip(...)`
+- 保留原本 fallback 到 `candidates[0]` 的邏輯,只改 `None` fallback
+
+**驗證**:全新 clone(無任何 report 檔案)改完後,**219 passed, 3 skipped, 0 fail**,
+且 3 個 skip 都是測試內部動態路徑,不是 IsADirectoryError。
+
+#### 2. 🟡 5-Why fallback 重設計(`src/fa_improver/improvers/root_cause.py`)
+
+**稽核發現**:`_add_5why_flow_diagram()` 有 3 個 bug:
+- `s.split("。")[0][:15]` 在沒有「。」時 return 整段,再 `[:15]` 從字中間切
+- 15 字太短(中文 15 字差不多一句完整建議,英文 15 char 才 2-3 個單字)
+- 強制補滿 5 個步驟(通用「Why 2~5」佔位),與實際內容無關
+
+**修法**:
+- 新增 `_truncate_step_text()` helper,同時認中英文句號「。」與「.」
+- 若 `len(text) <= max_chars` 原樣返回(不從中間切)
+- 若有句號取第一句,無句號才按 max_chars 切
+- `_add_5why_flow_diagram()` 重寫 fallback:suggestions 非空時只截斷實際 suggestions,
+  suggestions 為空時才 fallback 到預設 5 步(向後相容)
+
+**新增 14 個單元測試**(`tests/unit/test_root_cause.py`):
+- TestTruncateStepText(6):短文字/空字串/中文句號/英文句號/無句號/不切中間
+- Test5WhyFlowDiagram(8):短建議不切/中文切句/英文切句/2 個建議無假佔位/
+  3 個建議/5 個建議/6 個建議截到 5 個/空 suggestions fallback
+
+#### 3. 🔴 視覺回歸測試改用合成 fixture(讓 CI 真在跑)
+
+**稽核發現**:16 個視覺回歸測試(`tests/integration/test_visual_quality.py` + `test_slide_rendering.py`)
+寫死 `PROJECT_ROOT = Path("/home/elan/fa-report-refactor")`,依賴的客戶 pptx 被 `.gitignore` 排除。
+CI 環境跑這些測試時永遠 skip——安全網形同虛設。
+
+**修法**:
+- 新增 `scripts/build_synthetic_fixtures.py`:程式化產生 3 個**完全去識別化**合成 pptx + eval JSON
+  - `synthetic_A_vertical`:用 layout[9] "Title and Vertical Text"(含 "Vertical" 關鍵字,觸發 Bug 3 防護)
+  - `synthetic_B_single_placeholder`:Blank layout + 0.3 in 小 textbox(< BODY_MIN_HEIGHT,觸發 v3.1.3 修正)
+  - `synthetic_C_decoration`:母片含 LeftTopDecoration 矩形(left=0, top=0, w=1in, h=0.5in,觸發 TITLE_SAFE_LEFT_INCH)
+- 新增 `tests/integration/_fixture_resolver.py`:動態解析 fixture 路徑
+  - 環境變數 `FA_REPORT_PROJECT_ROOT` 可覆蓋路徑(用 `:` 分隔)
+  - 預設找 `/home/elan/fa-report-refactor` + GitHub Actions 路徑
+  - 找不到真實 pptx 時 fallback 到合成 fixture
+- 新增 `tests/integration/_synthetic_fixtures/`(3 個 fixture,公開可見)
+- 修改 `tests/integration/test_visual_quality.py`(9 個測試)+ `tests/integration/test_slide_rendering.py`(7 個測試),
+  全部改用 `resolve_input_pptx/resolve_eval_json`
+- 順手修掉**稽核發現 #1**(`ruff format --check` 卡住的 2 個測試檔)— v3.1.3 以來 CI 一直紅燈的根因
+
+**公開安全**:3 個合成 pptx 完全去識別化(無 ELAN logo、無真實客戶名稱、無機密文字),
+使用 python-pptx 預設母片 + 純灰底,公開放在 repo 是安全的。
+
+#### 4. 📝 版本號同步 + CHANGELOG 條目
+
+依據根倉庫 `docs/handoff/2026-08-31-v310-git-push-summary.md §5.3 步驟 4` 發版 checklist:
+- `pyproject.toml`: 3.1.0 → 3.1.4
+- `src/fa_improver/__init__.py`: 3.0.0 → 3.1.4
+- `SKILL.md` frontmatter: 3.1.0 → 3.1.4
+- CHANGELOG.md: 新增 v3.1.4 條目(本條目)+ 修正「標籤」表格(見下)
+
+### 📊 v3.1.4 統計
+
+| 指標 | v3.1.3 | v3.1.4 |
+|------|--------|--------|
+| 測試通過 | 219 | 233(+14:5-Why 新測試) |
+| 測試 skip | 3 | 3(都是測試內部動態路徑) |
+| 覆蓋率 | 90% | 90% |
+| ruff check | ✅ | ✅ |
+| ruff format | ❌(CI 從 08-31 起紅燈) | ✅ **稽核發現 #1 順手解決** |
+| CI Build Distribution | 一直被 skip | ✅ **v3.1.4 起重跑** |
+| CI 狀態 | ❌(自 v3.1.3 起持續紅燈) | ✅ **5/5 jobs success** |
+| 視覺回歸測試 CI | ❌ 永遠 skip(硬編路徑 + .gitignore) | ✅ **真在跑**(用合成 fixture) |
+| 合成 fixture | — | 3 個(完全去識別化) |
+
+### 🔗 PR & 相關
+
+- PR #1: https://github.com/kcf7012/fa-report-refactor/pull/1
+- 稽核報告: `docs/handoff/2026-09-02-fa-report-refactor-audit-handoff.md`
+- 改善計畫: `docs/handoff/2026-09-03-audit-remediation-plan-handoff.md`
+- 5 commits: 18bb4cd, c87136f, 27495b1, fc521fb, 5b48690
+
+---
+
 ## [3.1.3] - 2026-09-02
 
 ### 🎨 用戶回饋版面優化 — Kenny 2026-09-02 反饋的 3 個版面問題
@@ -609,13 +703,14 @@ SlideAction.ADD_MONITORING_KM             # PREVENTION < 85 時加入
 
 ## 標籤
 
-| Tag | 對應版本 | 重點 |
-|-----|---------|------|
-| `v3.1.3` | 2026-09-02 | 修 Kenny 2026-09-02 回饋的 3 個版面問題(標題偏左/重疊/6 維度圖)+ 加 4 個視覺回歸測試 |
-| `v3.1.2` | 2026-09-01 | 修 v3.1.1 殘留的 4 類版面渲染問題(疊加/placeholder/旋轉/殘留)+ 加視覺驗證腳本 |
-| `v3.1.1` | 2026-08-31 | 修批次版面渲染問題(8 張空白頁 → 0、座標動態適應、+7 smoke test)。**注意**:v3.1.2 取代,因有未修問題 |
-| `v3.1.0` | 2026-08-31 | LLM 安全強化(PII 遮罩+tenacity 重試)+ TemplateLoader 完整整合 + 視覺元素 + CLI 增強 |
-| `v3.0.1` | 2026-08-31 | Pre-commit + uv 依賴鎖定 + PPT 轉換測試 |
-| `v3.0.0` | 2026-08-31 | 模組化 + 6 維度完整覆蓋 |
-| `v2.3.0` | 2026-01-28 | 原始 baseline(已過時) |
-| `baseline-v2.3.0` | — | 對照用 baseline tag |
+| Tag | 對應版本 | GitHub Release | 本地 tag | 重點 |
+|-----|---------|----------------|---------|------|
+| `v3.1.4` | 2026-09-03 | ✅ | ✅ | 稽核修正 + CI 從紅轉綠 + 視覺回歸測試誠實化 |
+| `v3.1.3` | 2026-09-02 | ✅ | ✅ | 修 3 個版面問題(標題偏左/重疊/6 維度圖)+ 加 4 個視覺回歸測試 |
+| `v3.1.2` | 2026-09-01 | ✅ | ✅ | 修 v3.1.1 殘留的 4 類版面渲染問題(疊加/placeholder/旋轉/殘留)+ 加視覺驗證腳本 |
+| `v3.1.1` | 2026-08-31 | ❌ 已刪 | ❌ 已刪 | **注意**:被 v3.1.2 取代 |
+| `v3.1.0` | 2026-08-31 | ✅ | ✅ | LLM 安全強化(PII 遮罩+tenacity 重試)+ TemplateLoader 完整整合 + 視覺元素 + CLI 增強 |
+| `v3.0.1` | 2026-08-31 | ❌ | ✅(未 push) | 補 Pre-commit + uv(僅本地) |
+| `v3.0.0` | 2026-08-31 | ❌ | ✅(未 push) | 模組化 + 6 維度覆蓋(僅本地) |
+| `v2.3.0` | 2026-01-28 | ❌ | ❌ | 不存在(推測應為「原始 baseline」之稱) |
+| `baseline-v2.3.0` | — | ❌ | ❌ | 不存在 |

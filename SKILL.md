@@ -1,7 +1,7 @@
 ---
 name: fa-report-improvement
 description: Improve semiconductor failure analysis (FA) reports based on professional 8D evaluation criteria. v3.1 features PII redaction, tenacity retry, full TemplateLoader integration, visual elements, and CLI enhancements.
-version: 3.1.0
+version: 3.1.4
 entrypoint: src/fa_improver/__main__.py
 inputs:
   - id: report
