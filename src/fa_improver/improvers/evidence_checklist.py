@@ -22,6 +22,7 @@ from ..visuals import (
     ChecklistGenerator,
     ComparisonTableGenerator,
 )
+from ._safe_shape import TITLE_SAFE_LEFT_INCH
 from ._template_helper import resolve_template
 
 
@@ -51,7 +52,10 @@ def add_evidence_checklist_slide(
 
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-        margin = 0.5
+        # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
+        margin = TITLE_SAFE_LEFT_INCH - 0.2
+        if margin < 0.5:
+            margin = 0.5
         content_w = sw - 2 * margin
 
         # 標題 — 優先從樣板讀取
@@ -76,7 +80,7 @@ def _add_comparison_data_table(slide, content_w: float = 9.0) -> None:
     """加入對照組 vs 異常品數據對照表"""
     gen = ComparisonTableGenerator(
         slide,
-        left=0.5,
+        left=TITLE_SAFE_LEFT_INCH - 0.2,  # v3.1.4:與 _safe_shape 對齊
         top=1.4,
         width=content_w,
         height=2.2,
@@ -100,7 +104,7 @@ def _add_evidence_checklist(slide, content_w: float = 9.0) -> None:
     """加入圖片品質與數據追溯性檢查清單"""
     gen = ChecklistGenerator(
         slide,
-        left=0.5,
+        left=TITLE_SAFE_LEFT_INCH - 0.2,  # v3.1.4:與 _safe_shape 對齊
         top=3.9,
         width=content_w,
         height=2.8,
