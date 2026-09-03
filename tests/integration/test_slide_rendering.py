@@ -158,9 +158,9 @@ class TestSlideRenderingNoEmptySlides:
             if _is_empty_slide(slide):
                 empty_slides.append(slide_num)
 
-        assert (
-            not empty_slides
-        ), f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
+        assert not empty_slides, (
+            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
+        )
 
     def test_n160jcn_no_empty_slides(self):
         """N160JCN 改善後不應有空白投影片"""
@@ -178,9 +178,9 @@ class TestSlideRenderingNoEmptySlides:
             if _is_empty_slide(slide):
                 empty_slides.append(slide_num)
 
-        assert (
-            not empty_slides
-        ), f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
+        assert not empty_slides, (
+            f"[{input_pptx.name}] 發現 {len(empty_slides)} 張新增的空白投影片: {empty_slides}。"
+        )
 
 
 class TestSlideRenderingBounds:
