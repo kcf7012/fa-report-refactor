@@ -5,6 +5,102 @@ All notable changes to fa-improver will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.4-regression-fix] - 2026-09-04
+
+### 🛡️ 標題偏左回歸修正
+
+Kenny 2026-09-03 視覺驗收 v3.1.4 時回饋「標題又偏左」,本次修正 v3.1.3 修法不完整的系統性問題。
+
+#### 對照檢查結果
+
+`grep -rn "margin = 0\.5" src/fa_improver/improvers/` 結果:**8 個檔案,11 處 `margin = 0.5` 殘留**。
+
+v3.1.3 handoff 只記錄了 `basic_info.py` 一個檔案,實際還有 7 個檔案沒改乾淨:
+
+- `summary.py`(Executive / Key Improvements / Dimension Progress slide)
+- `root_cause.py`(5-Why 流程圖 + 根因驗證 slide)
+- `analysis_method.py`、`evidence_checklist.py`
+- `problem_definition.py`、`prevention.py`
+
+Helper 函式內部還有 8 處 `left=0.5` 寫死(`_add_8d_checklist`、`_add_method_comparison_table` 等),獨立於頂層 margin 修改。
+
+#### 修正策略
+
+用 `TITLE_SAFE_LEFT_INCH - 0.2 = 1.0`(而非 1.2)統一所有 margin:
+
+```python
+margin = TITLE_SAFE_LEFT_INCH - 0.2  # = 1.0
+if margin < 0.5:
+    margin = 0.5
+```
+
+**為什麼用 1.0 不是 1.2**:
+- 對 10 in 標準寬度 slide(260811):margin=1.0 → content_w=8.0,測試 ≥ 8.0 通過
+- 對 13.33 in 寬度 slide(MS、N160JCN):margin=1.0 → content_w=11.33,通過
+- 與 `_safe_shape.safe_textbox` fallback 邏輯一致
+
+#### 修改清單(8 個檔案,18 處)
+
+| 檔案 | 修改處 | 改法 |
+|------|--------|------|
+| `basic_info.py` | L67(頂層 ×1) | `margin = TITLE_SAFE_LEFT_INCH - 0.2` + floor |
+| `summary.py` | L116, L163, L213(頂層 ×3) | 同上 |
+| `root_cause.py` | L49, L236(頂層 ×2) | 同上 |
+| `analysis_method.py` | L54(頂層)+ L83, L104(helper ×2) | 頂層同 + helper 用 `TITLE_SAFE_LEFT_INCH - 0.2` |
+| `evidence_checklist.py` | L54(頂層)+ L83, L107(helper ×2) | 同上 |
+| `problem_definition.py` | L53(頂層)+ L82, L115(helper ×2) | 同上 |
+| `prevention.py` | L46, L205(頂層 ×2)+ L273(helper ×1) | 同上 |
+| `root_cause.py` | L189(helper ×1) | `left=TITLE_SAFE_LEFT_INCH - 0.2` |
+
+所有檔案頂部新增 `from ._safe_shape import TITLE_SAFE_LEFT_INCH`。
+
+#### 驗證
+
+- 本機 pytest:233 passed, 3 skipped
+- 模擬 CI (`FA_REPORT_PROJECT_ROOT=/nope/1`):233 passed, 3 skipped
+  - 包含 `test_260811_standard_width_has_dynamic_shapes` 通過(content_w=8.0 in)
+- ruff check:All checks passed
+- ruff format:All 39 files formatted
+- 母片保護測試:全綠(無 master XML 變動)
+
+#### GitHub Actions CI(Run #25)
+
+| Job | Python | 結果 |
+|-----|--------|------|
+| Test (Python 3.10) | 3.10 | ✅ success |
+| Test (Python 3.11) | 3.11 | ✅ success |
+| Test (Python 3.12) | 3.12 | ✅ success |
+| Lint & Format | — | ✅ success |
+| Build Distribution | — | ✅ success |
+
+URL:https://github.com/kcf7012/fa-report-refactor/actions/runs/33769352155
+
+#### 視覺驗收
+
+3 份報告改善後 pptx → 53 張 PNG,slide-07 範例:
+
+| Shape | 修正前 left | 修正後 left |
+|-------|-------------|--------------|
+| 標題「分析方法與流程」 | 1.20 in | 1.20 in |
+| D1-D8 checkbox | **0.50 in**(被裝飾擋住) | **1.00 in**(對齊) |
+| D1-D8 文字 | 0.85 in(被裝飾擋住) | 1.35 in(對齊) |
+
+驗收頁:`docs/handoff/screenshots/v3.1.4-regression-visual-review.html`
+
+#### 排除的問題
+
+- **Kenny 母片層級的「D0/Symptom」標題 left=0.04 in**(母片內建 layout,非 fa_improver 生成) — 需修母片 XML,超出本專案範圍,列入 v3.1.5 backlog
+- **`_safe_shape.py:263` 的 `margin = 0.5`**(floor 邏輯) — 保留,合理的下限保護
+
+#### 給未來 Agent 的教訓
+
+1. **不要只信單元測試**:v3.1.4 修正前單元測試全綠,但視覺仍錯。**一定要跑改善 + 截圖驗證**
+2. **別只看 Kenny 提到的單檔**:本次 Kenny 只說「標題偏左」,但 grep 整個系統發現 8 檔案都有問題
+3. **rebase 衝突 markers 殘留風險**:reset --hard 後必須 `git diff` 確認無衝突 markers,再 force-push
+4. **Helper 不應寫死 left=0.5**:應透過參數從頂層傳入,或直接引用模組常數(如 `TITLE_SAFE_LEFT_INCH - 0.2`)
+
+---
+
 ## [3.1.4] - 2026-09-03
 
 ### 🔍 稽核修正與測試誠實化
