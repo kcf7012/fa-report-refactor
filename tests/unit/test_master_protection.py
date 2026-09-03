@@ -1,8 +1,9 @@
 """母片保護測試 — 最關鍵的測試"""
 
 import pytest
-from fa_improver.layout.protector import MasterProtectionError, MasterProtector
 from pptx import Presentation
+
+from fa_improver.layout.protector import MasterProtectionError, MasterProtector
 
 
 class TestMasterProtection:

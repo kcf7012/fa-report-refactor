@@ -13,8 +13,9 @@ v3.1.4 新增:稽核報告 #4 揭露 _add_5why_flow_diagram() 有兩個 bug:
 
 from __future__ import annotations
 
-from fa_improver.improvers.root_cause import _truncate_step_text
 from pptx import Presentation
+
+from fa_improver.improvers.root_cause import _truncate_step_text
 
 
 class TestTruncateStepText:
