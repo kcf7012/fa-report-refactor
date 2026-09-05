@@ -101,10 +101,10 @@ src/fa_improver/         ← 主程式碼
 
 ```bash
 # 跑測試
-.venv/bin/python -m pytest tests/
+uv run pytest tests/
 
 # Lint
-.venv/bin/python -m ruff check src/
+uv run ruff check src/
 
 # 端對端測試
 python test_api_key.py         # 驗證 API key

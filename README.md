@@ -21,7 +21,8 @@
 uv sync
 
 # 方式 B:使用既有 .venv
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate        # Windows:.venv\Scripts\activate
 pip install -e ".[dev,llm]"
 ```
 
@@ -152,19 +153,19 @@ fa-improve /path/to/report.pptx --eval /path/to/eval.json --output /path/to/outp
 
 ```bash
 # 跑測試(219 個,含 .ppt 轉換、母片保護、LLM、樣板、視覺元素、視覺品質)
-.venv/bin/python -m pytest tests/ -q
+uv run pytest tests/ -q
 
 # 跑特定測試
-.venv/bin/python -m pytest tests/unit/test_visual_generators.py -v
+uv run pytest tests/unit/test_visual_generators.py -v
 
 # 跑母片保護測試(AGENTS.md § 9 必跑)
-.venv/bin/python -m pytest tests/unit/test_master_protection.py -v
+uv run pytest tests/unit/test_master_protection.py -v
 
 # 完整測試含覆蓋率(目標 ≥ 90%)
-.venv/bin/python -m pytest tests/ --cov=fa_improver --cov-report=term-missing
+uv run pytest tests/ --cov=fa_improver --cov-report=term-missing
 
 # Lint
-ruff check src/
+uv run ruff check src/
 
 # Pre-commit hooks(安裝一次,之後自動跑)
 pip install pre-commit

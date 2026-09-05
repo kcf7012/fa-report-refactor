@@ -131,7 +131,7 @@ uv sync --all-extras
 # 方式 A:直接用 uv run(推薦,不用 activate)
 uv run python -m fa_improver input.pptx --eval eval.json --output improved.pptx
 
-# 方式 B:明確指定 .venv/bin/python
+# 方式 B:明確指定 venv 內的 python(POSIX-only,Windows 是 .venv\Scripts\python.exe)
 .venv/bin/python -m fa_improver input.pptx --eval eval.json --output improved.pptx
 
 # 方式 C:跑測試
@@ -234,7 +234,7 @@ ModuleNotFoundError: No module named 'fa_improver'
 uv run python -m fa_improver input.pptx --eval eval.json --output out.pptx
 
 # 或明確指定
-.venv/bin/python -m fa_improver ...
+uv run python -m fa_improver ...
 ```
 
 ### 錯誤 2:PowerShell 執行策略限制(Windows)
@@ -392,7 +392,7 @@ uv sync --all-extras
 - repo: local
   hooks:
     - id: pytest
-      entry: .venv/bin/python -m pytest tests/ -q
+      entry: uv run --frozen pytest tests/ -q
       language: system
       pass_filenames: false
       always_run: true
