@@ -18,7 +18,7 @@ from ..domain.evaluation import EvaluationResult
 from ..layout.selector import find_content_layout
 from ..templates.loader import TemplateLoader
 from ..visuals import FlowDiagramGenerator
-from ._safe_shape import TITLE_SAFE_LEFT_INCH
+from ._safe_shape import BODY_SAFE_LEFT_INCH
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 
@@ -48,7 +48,7 @@ def add_statistical_analysis_slide(
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
         # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
-        margin = TITLE_SAFE_LEFT_INCH - 0.2
+        margin = BODY_SAFE_LEFT_INCH
         if margin < 0.5:
             margin = 0.5
         content_w = sw - 2 * margin
@@ -186,7 +186,7 @@ def _add_5why_flow_diagram(
 
     flow_gen = FlowDiagramGenerator(
         slide,
-        left=TITLE_SAFE_LEFT_INCH - 0.2,  # v3.1.4:與 _safe_shape 對齊
+        left=BODY_SAFE_LEFT_INCH,  # P4:body 安全左界(有量測依據)
         top=4.5,
         width=cw,
         height=2.5,
@@ -238,7 +238,7 @@ def add_5why_slide(
 
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
         # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
-        margin = TITLE_SAFE_LEFT_INCH - 0.2
+        margin = BODY_SAFE_LEFT_INCH
         if margin < 0.5:
             margin = 0.5
         content_w = sw - 2 * margin
