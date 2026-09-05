@@ -35,6 +35,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from importlib.metadata import PackageNotFoundError, distribution
+from pathlib import Path
 
 import pytest
 
@@ -97,3 +98,23 @@ class TestPackageIsProperlyInstalled:
             f"`python -m fa_improver --help` 失敗。\nstderr: {result.stderr.strip()}{_REMEDY}"
         )
         assert "usage:" in result.stdout.lower()
+
+    @_needs_install
+    def test_imports_the_expected_copy(self):
+        """import 到的要是這個工作目錄的 src/,不是別處的另一份
+
+        只驗「import 得到」不夠 —— venv 裡可能躺著 iCloud 產生的 .pth 衝突副本
+        (實測看過 `_editable_impl_fa_improver 2.pth`),內容若指向舊路徑,
+        Python 會安靜地載入另一份程式碼,而前兩個測試完全抓不到。
+        """
+        result = _run_isolated(["-c", "import fa_improver; print(fa_improver.__file__)"])
+        assert result.returncode == 0, f"import 失敗:{result.stderr.strip()}{_REMEDY}"
+
+        loaded = Path(result.stdout.strip()).resolve()
+        expected_dir = (Path(__file__).resolve().parents[2] / "src" / "fa_improver").resolve()
+        assert loaded.parent == expected_dir, (
+            f"import 到的不是預期的那一份。\n"
+            f"  實際:{loaded}\n  預期位於:{expected_dir}\n"
+            f"可能是 venv 內有指向舊路徑的 .pth 衝突副本 —— "
+            f"檢查 site-packages 裡有沒有「原名 + 空格 + 數字」的 .pth。"
+        )
