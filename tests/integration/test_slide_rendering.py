@@ -30,15 +30,15 @@ if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
 # v3.1.4 修正(稽核 #2):改用動態 fixture resolver
+from fa_improver.paths import SKILL_ROOT  # noqa: E402
 from tests.integration._fixture_resolver import (  # noqa: E402
-    SYNTHETIC_FIXTURE_DIR,
     find_project_root,
     get_report_dir,
     resolve_eval_json,
     resolve_input_pptx,
 )
 
-PROJECT_ROOT = find_project_root() or SYNTHETIC_FIXTURE_DIR.parent.parent.parent
+PROJECT_ROOT = find_project_root() or SKILL_ROOT
 REPORT_DIR = get_report_dir()
 
 

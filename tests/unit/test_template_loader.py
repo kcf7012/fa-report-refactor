@@ -11,6 +11,7 @@ from fa_improver.domain.template import (
     TemplateSection,
     TemplateValidationError,
 )
+from fa_improver.paths import SKILL_ROOT
 from fa_improver.templates.loader import TemplateLoader
 
 
@@ -205,9 +206,8 @@ class TestTemplateInheritance:
 
     def test_load_real_example_custom_template(self):
         """載入實際的範例自訂樣板"""
-        from pathlib import Path
 
-        examples_dir = Path(__file__).parent.parent.parent / "examples" / "custom_templates"
+        examples_dir = SKILL_ROOT / "examples" / "custom_templates"
         if not examples_dir.exists():
             pytest.skip("範例自訂樣板不存在")
 

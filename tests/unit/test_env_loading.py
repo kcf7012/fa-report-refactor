@@ -1,11 +1,11 @@
 """OpenAI API Key 載入測試 — 確保所有讀取路徑都支援 .env"""
 
 import os
-from pathlib import Path
 
 # ruff: noqa: I001
 import pytest
 from fa_improver.llm.openai_client import OpenAIClient
+from fa_improver.paths import SKILL_ROOT
 
 
 class TestEnvFileLoading:
@@ -113,18 +113,18 @@ class TestEnvExampleFile:
 
     def test_env_example_exists(self):
         """.env.example 檔案應存在於專案根目錄"""
-        env_example = Path(__file__).parent.parent.parent / ".env.example"
+        env_example = SKILL_ROOT / ".env.example"
         assert env_example.exists(), f".env.example 不存在於 {env_example}"
 
     def test_env_example_has_openai_key(self):
         """.env.example 應包含 OPENAI_API_KEY 範例"""
-        env_example = Path(__file__).parent.parent.parent / ".env.example"
+        env_example = SKILL_ROOT / ".env.example"
         content = env_example.read_text(encoding="utf-8")
         assert "OPENAI_API_KEY" in content
 
     def test_env_example_has_instructions(self):
         """.env.example 應包含設定說明"""
-        env_example = Path(__file__).parent.parent.parent / ".env.example"
+        env_example = SKILL_ROOT / ".env.example"
         content = env_example.read_text(encoding="utf-8")
         # 應有複製說明
         assert "cp" in content.lower() or "copy" in content.lower()
@@ -135,7 +135,7 @@ class TestGitignoreProtection:
 
     def test_env_in_gitignore(self):
         """.env 應被 .gitignore 排除"""
-        gitignore = Path(__file__).parent.parent.parent / ".gitignore"
+        gitignore = SKILL_ROOT / ".gitignore"
         content = gitignore.read_text(encoding="utf-8")
         # 應有 .env 規則
         lines = [
