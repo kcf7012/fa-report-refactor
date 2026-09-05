@@ -145,9 +145,64 @@ TITLE_SAFE_LEFT_INCH: float = 1.2
 TITLE_SAFE_TOP_INCH: float = 0.3
 TITLE_SAFE_HEIGHT_INCH: float = 0.85
 
+# body 內容的安全左界。P4 之前是各 improver 各自寫 `TITLE_SAFE_LEFT_INCH - 0.2`
+# (= 1.00 in),那個 `- 0.2` 沒有任何量測依據,而且**不足**:比 260811 母片
+# Picture 14 的右緣(1.12 in)還左 0.12 in。改成獨立常數,值由上面的量測決定,
+# 不再掛在 title 常數上跟著飄。
+BODY_SAFE_LEFT_INCH: float = 1.35
+
+# 原生 title placeholder 被往右移之後,寬度低於此值就放棄它、改用 safe_textbox。
+# ⚠️ 這個數字**不是量測來的**,是可讀性下限的判斷值:2.0 in 在 24pt 下約 6 個
+# 中文字,再窄下去 title 會被迫折行,比 fallback textbox(約 8.3 in 寬)更糟。
+# 與上面那些有量測依據的常數分開標示,免得被誤讀成也有母片量測背書。
+TITLE_MIN_WIDTH_INCH: float = 2.0
+
 # body placeholder 最小可用高度(低於此值就 fallback 用 safe_textbox)
 # 「Topic-Numbers」layout 的 body placeholder 只有 0.51 in 高,放不下 heading+bullets
 BODY_MIN_HEIGHT_INCH: float = 1.0
+
+
+def _ensure_title_left_safe(shape):
+    """把命中的 title shape 往右移到安全左界,移不動就回 ``None``。
+
+    P4 修正:`get_title_placeholder()` 的策略 1/2/3 原本一命中就直接
+    `return ph`,**完全不看 `left`**,所以 `TITLE_SAFE_LEFT_INCH` 只在
+    「找不到 placeholder」的 fallback 分支生效 —— 而那是少數情況。
+
+    為什麼是「移動」而不是「回 None 改用 safe_textbox」:移動保留母片給
+    placeholder 的字型 / 顏色樣式,符合本專案「母片保護是最高優先」的原則。
+    只有移完寬度不夠時才降級。
+
+    幾何寫在 **slide 層級**的 `<a:xfrm>`(python-pptx 會在該 slide 的
+    `spPr` 建/改 `a:off`、`a:ext`),master 與 layout 的 XML 完全不動,
+    所以 `tests/unit/test_master_protection.py` 不受影響。
+
+    **不自己追繼承鏈**:python-pptx 的 `_InheritsDimensions._effective_value()`
+    已經做完「本層有設就用本層,否則往 layout / master 取」,`shape.left`
+    讀到的就是有效值。唯一要保留的是 `None` 判斷 —— layout 與 master 都
+    沒有對應 placeholder 時 `_inherited_value()` 會回 `None`。
+
+    寬度採「保留原本的右緣」而不是「補到投影片邊界」:右緣不動就不會擠到
+    同一張 layout 上其他 placeholder(例如 `Content with Caption` 的
+    `Content Placeholder 2` 就緊接在 title 右邊)。
+    """
+    left = shape.left
+    if left is None:
+        return shape  # 無座標可判定,維持原行為(不要假裝有防線)
+    safe_left = Inches(TITLE_SAFE_LEFT_INCH)
+    if left >= safe_left:
+        return shape
+
+    width = shape.width
+    if width is None:
+        return None  # 有 left 卻沒有 width,無法安全縮寬 → 交給 safe_textbox
+    new_width = left + width - safe_left
+    if new_width < Inches(TITLE_MIN_WIDTH_INCH):
+        return None  # 移完太窄,fallback textbox 比較好
+
+    shape.left = safe_left
+    shape.width = new_width
+    return shape
 
 
 def get_title_placeholder(slide):
@@ -172,15 +227,27 @@ def get_title_placeholder(slide):
         title placeholder shape,或 None
     """
     # 先檢查 layout(直排 layout 不應使用其 title placeholder)
+    # ⚠️ 已知缺陷(第一輪稽核 backlog #2,P4 刻意不修,留給 P7):
+    #    這是**脆弱的字串比對**,只涵蓋 zh-TW「直排」與 en「Vertical」。
+    #    layout 名稱取決於建立該 pptx 的 PowerPoint UI 語言,所以
+    #    zh-CN「竖排」、ja「縦書き」以及「垂直」「縱向」「Portrait」全會漏掉,
+    #    Bug 3(90° 旋轉)可能重現而測不出來。
+    #    **不要靠加關鍵字來修**:那是丟棄式工作,改讀 XML 屬性之後整個作廢,
+    #    而且機制照樣是猜名稱,只是讓症狀變罕見。根治要讀 bodyPr 的 `vert`
+    #    屬性 / placeholder 的 `orient`。P7 一併處理,見該節。
     layout_name = slide.slide_layout.name
     if "直排" in layout_name or "Vertical" in layout_name:
         # 跳過 layout placeholder,改用 safe_textbox fallback
         return None
 
+    # P4:三條策略命中後都要過 _ensure_title_left_safe(),不能直接 return。
+    # 回 None 代表「這個 placeholder 救不回來」,交給 get_or_create_title()
+    # 用 safe_textbox 重建,不再往下試其他策略(往下找也是同一批 placeholder)。
+
     # 策略 1:用 placeholder_format.idx == 0(最嚴格)
     for ph in slide.placeholders:
         if ph.placeholder_format.idx == 0:
-            return ph
+            return _ensure_title_left_safe(ph)
     # 策略 2:用 placeholder type 找 TITLE/CENTER_TITLE
     try:
         from pptx.enum.shapes import PP_PLACEHOLDER
@@ -190,18 +257,29 @@ def get_title_placeholder(slide):
                 PP_PLACEHOLDER.TITLE,
                 PP_PLACEHOLDER.CENTER_TITLE,
             ):
-                return ph
+                return _ensure_title_left_safe(ph)
     except (AttributeError, ValueError):
         pass
     # 策略 3:fallback — 找名稱含 title 的 shape
     for shape in slide.shapes:
         if shape.has_text_frame and "title" in shape.name.lower():
-            return shape
-    # v3.1.3 修正:若 layout 沒有 idx=0 placeholder 且只有 1 個 placeholder
-    # (如「Topic-Numbers」、「Topic」),跳過 — 改用 safe_textbox fallback。
-    # 否則 title 與該 placeholder 重疊,造成內容互相覆蓋。
-    if len(list(slide.placeholders)) <= 1:
-        return None
+            return _ensure_title_left_safe(shape)
+
+    # P4:刪掉原本的 `if len(list(slide.placeholders)) <= 1: return None`
+    # (第一輪稽核 backlog #1)。它與後面的 `return None` 結果完全相同,是死碼。
+    #
+    # 為什麼是刪掉、而不是把檢查移到策略 3 之前去「真正實作原始意圖」:
+    # 原始意圖是「單一 placeholder 的 layout 要跳過,避免 title 與它重疊」,
+    # 但 improver 建立的新投影片一律來自 `find_content_layout()`,而它明文
+    # 要求 `placeholder_count >= 2`(見 layout/selector.py),所以「只有 1 個
+    # placeholder」在這條路上到不了。把死碼改成會生效的分支,等於為一個
+    # 不存在的情境新增行為變更。
+    #
+    # 該意圖底下真正的風險是「title 與 body 解析到同一個 shape」
+    # (placeholder 型別為 TITLE 但 idx != 0 時,get_body_placeholder 的
+    # `idx != 0` 條件會挑中同一個)。那與 placeholder 數量無關,現有六份
+    # fixture 都到不了(PowerPoint 產生的 title 一律 idx=0),已記入 handoff
+    # 待辦,不在 P4 動它。
     return None
 
 
@@ -223,6 +301,9 @@ def get_body_placeholder(slide):
        用 safe_textbox 重新建立。
     """
     # 先檢查 layout
+    # ⚠️ 與 get_title_placeholder() 完全相同的脆弱字串比對,同樣只涵蓋
+    #    zh-TW / en,zh-CN「竖排」與 ja「縦書き」會漏掉。兩處要一起改,
+    #    P4 刻意不動,留給 P7(根治方式:讀 bodyPr 的 `vert` 屬性)。
     layout_name = slide.slide_layout.name
     if "直排" in layout_name or "Vertical" in layout_name:
         # 跳過 layout placeholder
@@ -292,8 +373,11 @@ def get_or_create_body(slide, slide_bounds=None):
 
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
     sh = slide_bounds["height_inch"] if slide_bounds else 7.5
-    # 動態 margin:左邊界比 title 多 0.1 in,確保對齊
-    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    # P4:改用有量測依據的 BODY_SAFE_LEFT_INCH。
+    # (舊註解寫「左邊界比 title 多 0.1 in,確保對齊」,但程式其實是
+    #  `TITLE_SAFE_LEFT_INCH - 0.2`,比 title 少 0.2 in —— 註解與程式碼
+    #  從一開始就對不上,不要沿用那個說法。)
+    margin = BODY_SAFE_LEFT_INCH
     if margin < 0.5:
         margin = 0.5
     return safe_textbox(
