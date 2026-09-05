@@ -18,6 +18,12 @@ concurrency:
 # ⚠️ UV_VERSION 要與本機 uv 版本一致(v3.1.5 起同為 0.8.22)。
 # 原本釘 "0.5"(實際解析成 0.5.31),與本機差了七個 minor 版本,
 # 導致 lockfile 行為與本機不同卻不會被發現。
+# ⚠️ CI 內的 uv run 一律加 --no-sync。
+# 每個 job 都已先跑 `uv sync --locked ...` 把環境準備好;若 uv run 不帶
+# --no-sync,它會依 .python-version(3.10)重新解析環境,在 matrix 的
+# 3.11/3.12 job 上等於**重建一個不含 dev extra 的環境**,結果就是
+# `error: Failed to spawn: pytest`。v3.1.5 把 .venv/bin/* 換成 uv run 時
+# 一度踩到這個坑,由 macOS runner 上線後的第一次 CI 抓到。
 env:
   UV_VERSION: "0.8.22"
   PYTHON_DEFAULT: "3.10"
@@ -57,13 +63,13 @@ jobs:
             echo "無可比對的 base,改掃 HEAD 的最後一個 commit"
             BASE="HEAD~1"
           fi
-          uv run python scripts/check_no_hardcoded_paths.py --base "$BASE"
+          uv run --no-sync python scripts/check_no_hardcoded_paths.py --base "$BASE"
 
       - name: Ruff check
-        run: uv run ruff check src/ tests/ scripts/
+        run: uv run --no-sync ruff check src/ tests/ scripts/
 
       - name: Ruff format check
-        run: uv run ruff format --check src/ tests/ scripts/
+        run: uv run --no-sync ruff format --check src/ tests/ scripts/
 
   # ============================================
   # 測試(主要,Python 矩陣)
@@ -99,11 +105,11 @@ jobs:
 
       - name: Create test fixtures
         # CI 環境沒有 report/*.pptx(被 .gitignore 排除),動態建立測試 fixtures
-        run: uv run python scripts/create_test_fixtures.py
+        run: uv run --no-sync python scripts/create_test_fixtures.py
 
       - name: Run test suite
         run: |
-          uv run pytest tests/ \
+          uv run --no-sync pytest tests/ \
             --cov=fa_improver \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -113,13 +119,13 @@ jobs:
       - name: Check master protection (母片保護)
         run: |
           echo "=== 母片保護驗證 ==="
-          uv run pytest tests/unit/test_master_protection.py -v
+          uv run --no-sync pytest tests/unit/test_master_protection.py -v
 
       - name: Verify CLI entry point
         run: |
           echo "=== CLI 驗證 ==="
-          uv run python -m fa_improver --help
-          uv run fa-improve --help
+          uv run --no-sync python -m fa_improver --help
+          uv run --no-sync fa-improve --help
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
@@ -163,14 +169,14 @@ jobs:
 
       - name: Create test fixtures
         # local pytest hook 會跑全套測試,需要 fixture
-        run: uv run python scripts/create_test_fixtures.py
+        run: uv run --no-sync python scripts/create_test_fixtures.py
 
       - name: Run all pre-commit hooks
         # v3.1.5:pre-commit 過去從未在 CI 跑過 —— CI 只手動重複了 ruff 那兩個
         # hook,check-merge-conflict / check-yaml / detect-private-key 這些
         # 從來沒有在 PR 上被執行過。「衝突標記沒清乾淨就 push」能連續兩輪
         # 發生,直接原因就是這個缺口。
-        run: uv run pre-commit run --all-files --show-diff-on-failure
+        run: uv run --no-sync pre-commit run --all-files --show-diff-on-failure
 
   # ============================================
   # Build distribution(僅 main 分支 / tag)
@@ -199,7 +205,7 @@ jobs:
         run: uv sync --locked --extra dev --extra build  # build 套件需要
 
       - name: Build sdist and wheel
-        run: uv run python -m build
+        run: uv run --no-sync python -m build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -211,7 +217,7 @@ jobs:
       - name: Verify package metadata
         run: |
           echo "=== Package metadata ==="
-          uv run python -c "
+          uv run --no-sync python -c "
           import sys
           if sys.version_info >= (3, 11):
               import tomllib
