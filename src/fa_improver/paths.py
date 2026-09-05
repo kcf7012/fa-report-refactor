@@ -98,8 +98,8 @@ def candidate_project_roots(start: Path | None = None) -> list[Path]:
 
     優先序:
       1. ``FA_REPORT_PROJECT_ROOT`` 環境變數(可指定多個,os.pathsep 分隔)
-      2. ``GITHUB_WORKSPACE`` 環境變數 —— 取代舊版硬編的
-         `/home/runner/work/...`,這樣 ubuntu 與 macOS runner 都正確
+      2. ``GITHUB_WORKSPACE`` 環境變數 —— 取代舊版硬編的 ubuntu runner
+         workspace 絕對路徑,這樣 ubuntu 與 macOS runner 都正確
       3. 從 ``start``(預設 ``SKILL_ROOT``)逐層向上,找符合雙條件的目錄
 
     明確指定的環境變數**不套用雙條件**:使用者的明示意圖優先,
