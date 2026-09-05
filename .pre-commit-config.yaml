@@ -45,6 +45,16 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
+  # 路徑守門(v3.1.5):唯一能機制性擋住路徑回歸的東西
+  - repo: local
+    hooks:
+      - id: no-hardcoded-paths
+        name: 路徑守門(禁止新增絕對路徑字面值)
+        entry: uv run --frozen python scripts/check_no_hardcoded_paths.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # pytest 必須通過(母片保護 + 全套測試)
   - repo: local
     hooks:

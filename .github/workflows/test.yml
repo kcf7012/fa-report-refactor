@@ -33,6 +33,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 路徑守門要比對 base commit,淺 clone 拿不到
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -46,6 +49,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --extra dev --extra llm
 
+      - name: 路徑守門(禁止新增絕對路徑字面值)
+        # PR 時比對 base ref;push 到 main 時比對前一個 commit
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "無可比對的 base,改掃 HEAD 的最後一個 commit"
+            BASE="HEAD~1"
+          fi
+          uv run python scripts/check_no_hardcoded_paths.py --base "$BASE"
+
       - name: Ruff check
         run: uv run ruff check src/ tests/ scripts/
 
@@ -56,13 +69,17 @@ jobs:
   # 測試(主要,Python 矩陣)
   # ============================================
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    # 名稱必須帶 matrix.os,否則 ubuntu 與 macOS 的 job 名稱相同,
+    # branch protection 的 required status check 無法分辨兩者。
+    name: Test (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        # v3.1.5:加入 macOS —— 本專案已從 WSL 遷移到 macOS,
+        # 但 CI 一直只跑 ubuntu,跨平台問題完全沒有被守住。
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -122,13 +139,47 @@ jobs:
           retention-days: 30
 
   # ============================================
+  # pre-commit(全 hook,含 CI 從未跑過的那幾個)
+  # ============================================
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_DEFAULT }}
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra llm
+
+      - name: Create test fixtures
+        # local pytest hook 會跑全套測試,需要 fixture
+        run: uv run python scripts/create_test_fixtures.py
+
+      - name: Run all pre-commit hooks
+        # v3.1.5:pre-commit 過去從未在 CI 跑過 —— CI 只手動重複了 ruff 那兩個
+        # hook,check-merge-conflict / check-yaml / detect-private-key 這些
+        # 從來沒有在 PR 上被執行過。「衝突標記沒清乾淨就 push」能連續兩輪
+        # 發生,直接原因就是這個缺口。
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+  # ============================================
   # Build distribution(僅 main 分支 / tag)
   # ============================================
   build:
     name: Build Distribution
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test]
+    needs: [lint, test, pre-commit]
     # 僅在 main 分支或 tag 推送時執行
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
 
