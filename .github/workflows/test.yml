@@ -127,15 +127,14 @@ jobs:
           uv run --no-sync python -m fa_improver --help
           uv run --no-sync fa-improve --help
 
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
+      # v3.1.5(柔伊第七輪查證 E6):移除 Codecov 上傳步驟。CODECOV_TOKEN
+      # secret 從未設定,原本的 fail_ci_if_error: false 把每次的上傳失敗
+      # (`Token required - not valid tokenless upload`)吞掉,job 顯示綠色
+      # 但覆蓋率從來沒有真的上傳成功過 —— 屬於「看起來正常但從來沒運作過」。
+      # 下方的 Archive coverage report 步驟(actions/upload-artifact)不需要
+      # token,已足夠讓人取得 coverage.xml;要重新接 Codecov,先在
+      # codecov.io 註冊此 repo 取得 token、設成 GitHub secret,再把這個
+      # 步驟加回來。
       - name: Archive coverage report
         if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
