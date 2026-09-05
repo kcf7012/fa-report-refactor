@@ -103,9 +103,44 @@ def clean_unused_placeholders(slide, *, also_remove: bool = True) -> int:
     return cleared
 
 
-# 標題安全位置常數(避免被母片左上裝飾擋住)
-# 母片通常在 x=0.54-0.97 in 有裝飾(深藍直條 + 淺藍色塊),
-# 所以 title 的 left 必須 >= 1.0 in,推薦 1.2 in
+# ---------------------------------------------------------------------------
+# 版面安全常數 —— 量測依據(2026-09-06,跨平台遷移 P4 第 1 步)
+# ---------------------------------------------------------------------------
+# 這些數字**先量測、後定值**。稽核警告過不要為了讓既有測試通過而反推數值,
+# 所以下面先記錄量測結果,再由結果推常數,不是反過來。
+#
+# 量測腳本:`scripts/measure_master_decoration.py`
+# 量測範圍:母片 + `find_content_layout()` 實際選中的那一個 layout
+#           (所有 improver 都只用這一個 layout,其餘 layout 的裝飾永遠
+#            不會出現在新投影片上,算進來只會讓數字虛高)
+# 判定方式:非 placeholder 的 shape 即裝飾;只採計「靠左緣、右緣未過投影片
+#           中線」這種**往右移就閃得開**的。滿版背景/橫幅(如 260811 母片
+#           的 Group 39,0.00~9.68 in)移到哪都閃不開,不列入下限。
+#
+# 「可迴避左側裝飾」的最大右緣(in):
+#
+#   檔案                                    選中 layout        title 帶  body 帶
+#   260811_Kobo_ZHT_RA6080_SPcomFailI       直排標題及文字        ——     1.12
+#   MS_Meishan_ADO_445239_260716            2L - Topic          0.97      ——
+#   N160JCN-EEK ... 260810                  Topic-Numbers       0.97      ——
+#   synthetic_C_decoration                  Content w/ Caption  1.00      ——
+#   (synthetic_A / synthetic_B 無左側裝飾)
+#
+#   title 帶(0.30~1.15 in)跨檔最大值:1.00 in
+#     └─ synthetic_C 的 master/LeftTopDecoration(0.00~1.00,top 0.00~0.50)
+#     └─ 真實客戶檔是 0.97:MS / N160JCN 的「群組」(0.54~0.97,top 0.00~0.94)
+#   body 帶(1.50 in ~ 投影片底部 -0.5)跨檔最大值:1.12 in
+#     └─ 260811 的 master/Picture 14(0.00~1.12,top 1.23~6.38)——
+#        該 layout 沒有 showMasterSp="0",母片 shape 確實會被渲染出來
+#
+# 定值規則:**量測最大值 + 0.20 in 緩衝,向上取到 0.05 的倍數**。
+#   title:1.00 + 0.20 = 1.20 → 1.20(與既有值相同 —— 量測獨立落回同一個數,
+#          不是為了配合既有測試才這樣選)
+#   body :1.12 + 0.20 = 1.32 → 1.35(既有的 `TITLE_SAFE_LEFT_INCH - 0.2` = 1.00
+#          **不足**,比 260811 的 Picture 14 右緣還左 0.12 in,正文首字會壓在
+#          母片裝飾上)
+# ---------------------------------------------------------------------------
+
 TITLE_SAFE_LEFT_INCH: float = 1.2
 TITLE_SAFE_TOP_INCH: float = 0.3
 TITLE_SAFE_HEIGHT_INCH: float = 0.85
