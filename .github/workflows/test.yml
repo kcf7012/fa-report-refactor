@@ -15,8 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 # Workflow 級環境變數(全 jobs 可用)
+# ⚠️ UV_VERSION 要與本機 uv 版本一致(v3.1.5 起同為 0.8.22)。
+# 原本釘 "0.5"(實際解析成 0.5.31),與本機差了七個 minor 版本,
+# 導致 lockfile 行為與本機不同卻不會被發現。
 env:
-  UV_VERSION: "0.5"
+  UV_VERSION: "0.8.22"
   PYTHON_DEFAULT: "3.10"
 
 jobs:
@@ -41,13 +44,13 @@ jobs:
         run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra llm
+        run: uv sync --locked --extra dev --extra llm
 
       - name: Ruff check
-        run: .venv/bin/ruff check src/ tests/ scripts/
+        run: uv run ruff check src/ tests/ scripts/
 
       - name: Ruff format check
-        run: .venv/bin/ruff format --check src/ tests/ scripts/
+        run: uv run ruff format --check src/ tests/ scripts/
 
   # ============================================
   # 測試(主要,Python 矩陣)
@@ -75,15 +78,15 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --extra dev --extra llm
+        run: uv sync --locked --python ${{ matrix.python-version }} --extra dev --extra llm
 
       - name: Create test fixtures
         # CI 環境沒有 report/*.pptx(被 .gitignore 排除),動態建立測試 fixtures
-        run: .venv/bin/python scripts/create_test_fixtures.py
+        run: uv run python scripts/create_test_fixtures.py
 
       - name: Run test suite
         run: |
-          .venv/bin/pytest tests/ \
+          uv run pytest tests/ \
             --cov=fa_improver \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -93,13 +96,13 @@ jobs:
       - name: Check master protection (母片保護)
         run: |
           echo "=== 母片保護驗證 ==="
-          .venv/bin/pytest tests/unit/test_master_protection.py -v
+          uv run pytest tests/unit/test_master_protection.py -v
 
       - name: Verify CLI entry point
         run: |
           echo "=== CLI 驗證 ==="
-          .venv/bin/python -m fa_improver --help
-          .venv/bin/fa-improve --help
+          uv run python -m fa_improver --help
+          uv run fa-improve --help
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
@@ -142,10 +145,10 @@ jobs:
         run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install build dependencies
-        run: uv sync --extra dev --extra build  # build 套件需要
+        run: uv sync --locked --extra dev --extra build  # build 套件需要
 
       - name: Build sdist and wheel
-        run: .venv/bin/python -m build
+        run: uv run python -m build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -157,7 +160,7 @@ jobs:
       - name: Verify package metadata
         run: |
           echo "=== Package metadata ==="
-          .venv/bin/python -c "
+          uv run python -c "
           import sys
           if sys.version_info >= (3, 11):
               import tomllib
