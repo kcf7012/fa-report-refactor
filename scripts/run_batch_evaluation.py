@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -18,10 +19,17 @@ from pathlib import Path
 
 from pptx import Presentation
 
+# 直接把 src/ 掛上 sys.path,不依賴 editable install 的 .pth。
+# (macOS 上 .pth 檔若被設了 UF_HIDDEN 旗標,site.addpackage() 會整個跳過它)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
 from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 from fa_improver.parsers.evaluation_parser import parse_evaluation
+from fa_improver.paths import get_report_dir
 
-REPORT_DIR = Path("/home/elan/fa-report-refactor/report")
+# v3.1.5(P1):原本寫死開發者本機的絕對路徑,換一台機器就 100% 失敗。
+# 改由 fa_improver.paths 動態解析,並可用 --report-dir 覆寫。
+REPORT_DIR = get_report_dir()
 
 # 3 組測試案例
 TEST_CASES = [
@@ -146,6 +154,18 @@ def _write_manifest(input_path, output_path, evaluation, result):
 
 def main() -> int:
     """批次執行所有測試案例"""
+    global REPORT_DIR
+
+    parser = argparse.ArgumentParser(description="批次執行 FA 報告改善測試")
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        help="報告檔所在目錄(預設:由 fa_improver.paths 自動解析)",
+    )
+    args = parser.parse_args()
+    if args.report_dir is not None:
+        REPORT_DIR = args.report_dir
+
     print("=" * 60)
     print("🚀 FA 報告批次改善測試")
     print("=" * 60)
@@ -190,7 +210,7 @@ def main() -> int:
             print(f"     原因:{r.get('reason', 'unknown')}")
 
     # 儲存批次結果
-    summary_path = Path("/home/elan/fa-report-refactor/report/batch_evaluation_summary.json")
+    summary_path = REPORT_DIR / "batch_evaluation_summary.json"
     summary_path.write_text(
         json.dumps(
             {

@@ -10,14 +10,16 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from pptx import Presentation
+
+from fa_improver.paths import SKILL_ROOT
 
 
 def main() -> None:
     """建立所有測試 fixtures"""
-    report_dir = Path("report")
+    # v3.1.5(P1):原本 Path("report") 依賴 cwd,從別的目錄執行會寫錯地方
+    report_dir = SKILL_ROOT / "report"
     report_dir.mkdir(exist_ok=True)
 
     # 1. 建立測試 pptx(有母片 + 2 個 layouts)

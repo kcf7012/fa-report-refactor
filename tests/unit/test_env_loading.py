@@ -77,7 +77,10 @@ class TestEnvFileLoading:
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
         env_file = tmp_path / ".env"
-        env_file.write_text("# 這是註解\nOPENAI_API_KEY=sk-with-comments\n# 另一行註解\n")
+        env_file.write_text(
+            "# 這是註解\nOPENAI_API_KEY=sk-with-comments\n# 另一行註解\n",
+            encoding="utf-8",
+        )
 
         original_cwd = os.getcwd()
         os.chdir(tmp_path)

@@ -11,7 +11,8 @@ v3.1.1 缺少的視覺驗證。
     report/<pptx_stem>_visual/slide-001.png, slide-002.png, ...
 
 需要:
-    libreoffice (apt install libreoffice)
+    LibreOffice(安裝指令依平台不同,見 fa_improver.utils.ppt_converter
+    .libreoffice_install_hint())與 pdftoppm(poppler)
 """
 
 from __future__ import annotations
@@ -22,7 +23,18 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPORT_DIR = Path("/home/elan/fa-report-refactor/report")
+# 直接把 src/ 掛上 sys.path,不依賴 editable install 的 .pth。
+# (macOS 上 .pth 檔若被設了 UF_HIDDEN 旗標,site.addpackage() 會整個跳過它)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from fa_improver.paths import get_report_dir
+from fa_improver.utils.ppt_converter import (
+    find_libreoffice,
+    libreoffice_install_hint,
+)
+
+# v3.1.5(P1):原本寫死開發者本機的絕對路徑,換一台機器就 100% 失敗。
+REPORT_DIR = get_report_dir()
 PPT_FILES = [
     "260811_Kobo_ZHT_RA6080_SPcomFailI_improved.pptx",
     "MS_Meishan_ADO_445239_260716_improved.pptx",
@@ -31,10 +43,15 @@ PPT_FILES = [
 
 
 def check_libreoffice() -> str:
-    """檢查 libreoffice 是否可用"""
-    path = shutil.which("libreoffice")
+    """檢查 LibreOffice 是否可用
+
+    v3.1.5(P1):原本只查 `shutil.which("libreoffice")`,而 macOS 的 LibreOffice
+    預設不把 `libreoffice` 或 `soffice` 放進 PATH —— 裝了也偵測不到,直接
+    sys.exit(1),錯誤訊息還寫死 apt。現在改用共用探測並依平台給正確指令。
+    """
+    path = find_libreoffice()
     if path is None:
-        print("❌ 找不到 libreoffice,請先安裝:apt install libreoffice")
+        print(f"❌ 找不到 LibreOffice,請先安裝:{libreoffice_install_hint()}")
         sys.exit(1)
     return path
 
@@ -66,7 +83,7 @@ def convert_pdf_to_images(pdf: Path, out_dir: Path) -> list[Path]:
 
 def convert_one(lo: str, pptx_path: Path) -> list[Path]:
     """轉一份 pptx 為 png 列表"""
-    visual_dir = REPORT_DIR / f"{pptx_path.stem}_visual"
+    visual_dir = pptx_path.parent / f"{pptx_path.stem}_visual"
     if visual_dir.exists():
         shutil.rmtree(visual_dir)
     pdf = convert_pptx_to_pdf(lo, pptx_path, visual_dir)
@@ -83,11 +100,17 @@ def main() -> int:
         type=Path,
         help="單一 pptx 檔案路徑(預設:批次跑3 份)",
     )
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        help="報告檔所在目錄(預設:由 fa_improver.paths 自動解析)",
+    )
     args = parser.parse_args()
 
+    report_dir = args.report_dir or REPORT_DIR
     lo = check_libreoffice()
 
-    pptx_files = [args.pptx] if args.pptx else [REPORT_DIR / name for name in PPT_FILES]
+    pptx_files = [args.pptx] if args.pptx else [report_dir / name for name in PPT_FILES]
 
     total_images = 0
     for pptx in pptx_files:

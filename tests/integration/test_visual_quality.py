@@ -28,7 +28,7 @@ _SKILL_SRC = Path(__file__).parent.parent.parent / "src"
 if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
-# v3.1.4 修正(稽核 #2):改用動態 fixture resolver,不再硬編 /home/elan/fa-report-refactor
+# v3.1.4 修正(稽核 #2):改用動態 fixture resolver,不再硬編專案絕對路徑
 from tests.integration._fixture_resolver import (  # noqa: E402
     SYNTHETIC_FIXTURE_DIR,
     find_project_root,
