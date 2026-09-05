@@ -45,11 +45,11 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
-  # pytest 必須通過(母片保護 + 89 個測試)
+  # pytest 必須通過(母片保護 + 全套測試)
   - repo: local
     hooks:
       - id: pytest
-        name: pytest(母片保護 + 105 測試)
+        name: pytest(母片保護 + 全套測試)
         # v3.1.5:原本寫死 .venv/bin/python —— 這是全 repo 唯一假設 venv 內部
         # 佈局的地方,POSIX-only 且 venv 換位置就失效。uv run 在 macOS /
         # Linux / Windows 都正確;--frozen 保證用 lock 內容,不會偷偷改 lock。
