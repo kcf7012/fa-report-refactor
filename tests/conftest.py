@@ -38,6 +38,24 @@ from fa_improver.paths import find_project_root  # noqa: E402
 _PROJECT_ROOT = find_project_root() or _SKILL_ROOT
 
 
+# 這些是**改善流程的輸出產物**,不是可以拿來當輸入的評估檔。
+# 若不排除,`sample_eval_json` 的 fallback(candidates[0])可能選到它們 ——
+# 例如 batch_evaluation_summary.json 的字母序排在 test_eval.json 之前,
+# 會讓 test_parse_json_file 解出 total_score=0.0 而失敗。
+# (柔伊第五輪查證缺陷 5:v3.1.5 改用 sorted() 之後才穩定觸發;在此之前
+#  是靠 glob 的檔案系統順序碰巧避開,本來就是不可靠的。)
+_OUTPUT_ARTIFACT_NAMES = {"batch_evaluation_summary.json"}
+
+
+def _is_output_artifact(path: Path) -> bool:
+    """判斷是否為改善流程的輸出,而非可用的輸入樣本。"""
+    return (
+        path.name in _OUTPUT_ARTIFACT_NAMES
+        or path.name.endswith(".manifest.json")
+        or "_improved" in path.name
+    )
+
+
 # === 環境資訊偵測 ===
 def _detect_report_files() -> dict:
     """動態偵測 report/ 內可用檔案
@@ -136,13 +154,15 @@ def sample_eval_json() -> Path | None:
 
     v3.1.4 修正:見 sample_pptx docstring。
     """
-    candidates = _REPORT_FILES.get("json", [])
+    candidates = [p for p in _REPORT_FILES.get("json", []) if not _is_output_artifact(p)]
     # 優先選擇 fa_report_ 開頭的 (評估檔),排除 _improved (改善輸出)
     eval_files = [
         p for p in candidates if p.name.startswith("fa_report_") and "_improved" not in p.name
     ]
     if eval_files:
         return eval_files[0]
+    # Fallback 不能拿掉:CI 的 create_test_fixtures.py 產生的是 test_eval.json,
+    # 沒有 fa_report_*.json,拿掉會讓 CI 的相關測試全部 skip。
     return candidates[0] if candidates else None
 
 
