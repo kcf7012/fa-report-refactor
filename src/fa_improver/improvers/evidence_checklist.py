@@ -22,7 +22,7 @@ from ..visuals import (
     ChecklistGenerator,
     ComparisonTableGenerator,
 )
-from ._safe_shape import BODY_SAFE_LEFT_INCH
+from ._safe_shape import BODY_SAFE_LEFT_INCH, CONTENT_RIGHT_MARGIN_INCH
 from ._template_helper import resolve_template
 
 
@@ -52,11 +52,11 @@ def add_evidence_checklist_slide(
 
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-        # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
+        # P4:左邊界用有量測依據的 BODY_SAFE_LEFT_INCH,右留白獨立(見常數註解)
         margin = BODY_SAFE_LEFT_INCH
         if margin < 0.5:
             margin = 0.5
-        content_w = sw - 2 * margin
+        content_w = sw - margin - CONTENT_RIGHT_MARGIN_INCH
 
         # 標題 — 優先從樣板讀取
         title = _get_or_create_title(slide, slide_bounds)

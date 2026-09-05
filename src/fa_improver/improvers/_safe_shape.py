@@ -151,6 +151,14 @@ TITLE_SAFE_HEIGHT_INCH: float = 0.85
 # 不再掛在 title 常數上跟著飄。
 BODY_SAFE_LEFT_INCH: float = 1.35
 
+# 內容區的**右**邊界留白。右側沒有母片裝飾的限制(量測只量出左側裝飾),
+# 所以它不該跟著左邊界走。P4 之前 11 處 improver 寫的是 `sw - 2 * margin`,
+# 等於把右留白綁在左安全邊界上 —— 左邊界為了避開裝飾往右挪 0.35 in,
+# 內容寬度就被砍掉 0.70 in,右邊平白多空一塊。
+# 0.5 是 `get_or_create_body()` 本來就在用的值(`sw - margin - 0.5`),
+# 改成共用常數之後,兩條路徑產出的寬度才會一致。
+CONTENT_RIGHT_MARGIN_INCH: float = 0.5
+
 # 原生 title placeholder 被往右移之後,寬度低於此值就放棄它、改用 safe_textbox。
 # ⚠️ 這個數字**不是量測來的**,是可讀性下限的判斷值:2.0 in 在 24pt 下約 6 個
 # 中文字,再窄下去 title 會被迫折行,比 fallback textbox(約 8.3 in 寬)更糟。
@@ -384,6 +392,6 @@ def get_or_create_body(slide, slide_bounds=None):
         slide,
         left=margin,
         top=1.5,
-        width=sw - margin - 0.5,
+        width=sw - margin - CONTENT_RIGHT_MARGIN_INCH,
         height=sh - 2.0,
     )
