@@ -13,9 +13,13 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+# iCloud Drive 會產生「原名 + 空格 + 數字」的衝突副本(見 docs/handoff/
+# 2026-09-05-zoe-verification-p0p2-execution.md)。gitignore **不解析引號**,
+# 所以 `".coverage "*` 這種寫法會被當成字面上以 `"` 開頭的 pattern 而完全失效。
+# 中間的空格不需跳脫,只有結尾空格才要。
 .coverage
 .coverage.*
-".coverage "*
+.coverage *
 htmlcov/
 coverage.xml
 
