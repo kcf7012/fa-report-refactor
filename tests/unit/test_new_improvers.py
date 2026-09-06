@@ -6,6 +6,7 @@ from pptx import Presentation
 from fa_improver.improvers.analysis_method import add_analysis_method_slide
 from fa_improver.improvers.evidence_checklist import add_evidence_checklist_slide
 from fa_improver.improvers.problem_definition import add_problem_definition_slide
+from fa_improver.paths import resolve_report_file
 
 
 class TestProblemDefinitionImprover:
@@ -138,13 +139,9 @@ class TestOrchestratorIntegration:
             dimensions=dimensions,
         )
 
-        from pathlib import Path
-
-        # 用一個 fixture pptx
-        pptx_path = (
-            Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
-        )
-        if not pptx_path.exists():
+        # 用一個 fixture pptx(路徑由 fa_improver.paths 解析,見 P1)
+        pptx_path = resolve_report_file("MS_Meishan_ADO_445239_260716.pptx")
+        if pptx_path is None:
             pytest.skip("範例 pptx 不存在")
 
         orchestrator = ImprovementOrchestrator(evaluation, pptx_path)
@@ -186,12 +183,9 @@ class TestOrchestratorIntegration:
             dimensions=dimensions,
         )
 
-        from pathlib import Path
-
-        pptx_path = (
-            Path(__file__).parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
-        )
-        if not pptx_path.exists():
+        # 用一個 fixture pptx(路徑由 fa_improver.paths 解析,見 P1)
+        pptx_path = resolve_report_file("MS_Meishan_ADO_445239_260716.pptx")
+        if pptx_path is None:
             pytest.skip("範例 pptx 不存在")
 
         orchestrator = ImprovementOrchestrator(evaluation, pptx_path)

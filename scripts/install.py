@@ -8,6 +8,16 @@ Updated: 2026-01-28
 import platform
 import subprocess
 import sys
+from pathlib import Path
+
+# 本腳本可能在套件尚未安裝時執行,所以直接把 src/ 掛上 sys.path。
+# fa_improver.utils.ppt_converter 只依賴標準函式庫,不需要先裝任何第三方套件。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+try:
+    from fa_improver.utils.ppt_converter import find_libreoffice, libreoffice_install_hint
+except ImportError:  # pragma: no cover - 原始碼樹不完整時仍要能跑安裝檢查
+    find_libreoffice = None
+    libreoffice_install_hint = None
 
 # 強制 stdout/stderr 使用 utf-8 編碼 (解決 Windows cp950 問題)
 if sys.platform.startswith("win"):
@@ -101,29 +111,30 @@ def install_python_packages():
 
 
 def check_libreoffice():
-    """檢查 LibreOffice 是否安裝"""
+    """檢查 LibreOffice 是否安裝
+
+    v3.1.5(P1):探測邏輯統一由 fa_improver.utils.ppt_converter 提供,
+    原本這裡自己列一份候選清單,與其他三處各不相同。
+    """
     print_header("檢查 LibreOffice")
 
-    libreoffice_paths = [
-        "libreoffice",
-        "soffice",
-        "/Applications/LibreOffice.app/Contents/MacOS/soffice",  # macOS
-        "/usr/bin/libreoffice",  # Linux
-        "C:\\Program Files\\LibreOffice\\program\\soffice.exe",  # Windows
-    ]
+    if find_libreoffice is None:
+        print("⚠️  無法載入 fa_improver,略過 LibreOffice 檢查")
+        return False
 
-    for path in libreoffice_paths:
-        try:
-            result = subprocess.run([path, "--version"], capture_output=True, timeout=3, text=True)
-            if result.returncode == 0:
-                version = result.stdout.strip()
-                print(f"✓ 找到 LibreOffice: {version}")
-                return True
-        except Exception:
-            continue
+    path = find_libreoffice()
+    if path is None:
+        print("⚠️  未找到 LibreOffice")
+        print(f"   安裝方式:{libreoffice_install_hint()}")
+        return False
 
-    print("⚠️  未找到 LibreOffice")
-    return False
+    try:
+        result = subprocess.run([path, "--version"], capture_output=True, timeout=10, text=True)
+        version = result.stdout.strip() or path
+    except Exception:
+        version = path
+    print(f"✓ 找到 LibreOffice: {version}")
+    return True
 
 
 def check_powerpoint():

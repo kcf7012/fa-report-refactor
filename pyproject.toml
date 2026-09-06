@@ -28,7 +28,9 @@ dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
     "mypy>=1.7",
-    "ruff>=0.1",
+    # ⚠️ 升級 ruff 時,這裡 / uv.lock / .pre-commit-config.yaml 的 rev
+    # 三處必須在同一個 PR 一起改,否則本機 hook 與 CI 行為會不一致。
+    "ruff>=0.16.6,<0.17",
     "pre-commit>=3.5",
     "types-Pillow",
     "hatchling>=1.18",  # Build backend (uv package = true)

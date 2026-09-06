@@ -28,7 +28,8 @@ _SKILL_SRC = Path(__file__).parent.parent.parent / "src"
 if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
-# v3.1.4 修正(稽核 #2):改用動態 fixture resolver,不再硬編 /home/elan/fa-report-refactor
+# v3.1.4 修正(稽核 #2):改用動態 fixture resolver,不再硬編專案絕對路徑
+from fa_improver.paths import SKILL_ROOT  # noqa: E402
 from tests.integration._fixture_resolver import (  # noqa: E402
     SYNTHETIC_FIXTURE_DIR,
     find_project_root,
@@ -37,7 +38,7 @@ from tests.integration._fixture_resolver import (  # noqa: E402
     resolve_input_pptx,
 )
 
-PROJECT_ROOT = find_project_root() or SYNTHETIC_FIXTURE_DIR.parent.parent.parent
+PROJECT_ROOT = find_project_root() or SKILL_ROOT
 REPORT_DIR = get_report_dir()
 
 RESIDUAL_TITLE_MARKERS = ("按一下", "Click to add", "Click here to add")
@@ -264,27 +265,31 @@ class TestNoTitleDecorationOverlap:
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqsafe")
 
         new_slides = list(prs.slides)[result.original_slide_count :]
-        # 找含 title 文字的 textbox(非 placeholder),檢查 left
+        # P4:**不再跳過 placeholder**。舊版 `if shape.is_placeholder: continue`
+        # 讓這支測試完全看不到「原生 title placeholder 被沿用、left 沒被檢查」
+        # 這條路 —— 而那正是最常見的一條路。placeholder 的 `left` 由
+        # python-pptx 的 _InheritsDimensions 解析(本層沒設就往 layout / master
+        # 取),讀到的已經是有效值,不必自己追繼承鏈;只有兩層都沒設時是 None。
         overlap_titles = []
         for offset, slide in enumerate(new_slides):
             slide_num = result.original_slide_count + offset + 1
             for shape in slide.shapes:
-                # 跳過 placeholder(layout 已對齊裝飾區的為例外)
-                if shape.is_placeholder:
-                    continue
-                # 只看 TEXT_BOX(可控制 left 的)
                 if not shape.has_text_frame:
                     continue
-                # 只看 title 類:top 在 1.0 in 內 且 height <= 1.0 in
-                # (top >= 1.5 是 body bullet list,不是 title)
+                # 只看 title 類:top 在 1.0 in 內 且 height <= 1.5 in
+                # (top >= 1.5 是 body bullet list;height 上限放寬到 1.5,
+                #  因為原生 title placeholder 常比 fallback textbox 高,
+                #  用 1.0 會把它們整批濾掉 —— 又變成看不見的漏檢)
                 if shape.top is None or shape.height is None:
                     continue
                 top_inch = shape.top / 914400
                 height_inch = shape.height / 914400
-                if top_inch > 1.0 or height_inch > 1.0:
-                    continue  # 不是 title(top 在 1.0 以上、或高度超過 1.0)
-                # 此 textbox 是 title
-                left_inch = shape.left / 914400 if shape.left is not None else 0
+                if top_inch > 1.0 or height_inch > 1.5:
+                    continue  # 不是 title(top 在 1.0 以上、或高度超過 1.5)
+                # 此 shape 是 title
+                if shape.left is None:
+                    continue  # layout 與 master 都沒設座標,無從判定
+                left_inch = shape.left / 914400
                 if left_inch < TITLE_SAFE_LEFT_INCH:
                     overlap_titles.append(
                         f"Slide {slide_num}: title left={left_inch:.2f} in,"
@@ -295,6 +300,170 @@ class TestNoTitleDecorationOverlap:
         assert not overlap_titles, (
             f"發現 {len(overlap_titles)} 個 title 被裝飾區擋住:\n" + "\n".join(overlap_titles[:5])
         )
+
+
+class TestTitlePlaceholderNotOverDecoration:
+    """P4:原生 title placeholder 也必須避開母片左上裝飾
+
+    背景(計劃書 P4「稽核優先1」):`get_title_placeholder()` 的策略 1
+    (`idx == 0`)與策略 2(`TITLE` / `CENTER_TITLE`)一旦命中就直接
+    `return ph`,**完全不看 `left` 座標**。`TITLE_SAFE_LEFT_INCH` 只在
+    `ph is None` 的 fallback 分支用得到,所以最常見的那條路反而沒有防線。
+
+    本類別**直接指名** `synthetic_C_decoration.pptx`,不透過
+    `FIXTURE_FALLBACKS` 的 stem 對應 —— 對應表會隨真實客戶檔在不在位而
+    改指到別的檔,那樣這支測試在 Kenny 的機器上跟在 CI 上驗的根本不是
+    同一件事,而且降級是靜默的(見 `_fixture_resolver` 的警告)。
+    """
+
+    FIXTURE = SYNTHETIC_FIXTURE_DIR / "synthetic_C_decoration.pptx"
+    EVAL = SYNTHETIC_FIXTURE_DIR / "synthetic_C_decoration.json"
+
+    def _improve(self, suffix: str):
+        if not self.FIXTURE.exists() or not self.EVAL.exists():
+            pytest.skip(f"缺少合成 fixture:{self.FIXTURE.name}")
+        return _run_improvement(self.FIXTURE, self.EVAL, output_suffix=suffix)
+
+    def test_new_slide_titles_clear_safe_left(self):
+        """每一張新投影片的 title(含原生 placeholder)left >= TITLE_SAFE_LEFT_INCH"""
+        from fa_improver.improvers._safe_shape import TITLE_SAFE_LEFT_INCH
+
+        prs, result, _ = self._improve("_vqphleft")
+
+        offenders = []
+        for offset, slide in enumerate(list(prs.slides)[result.original_slide_count :]):
+            slide_num = result.original_slide_count + offset + 1
+            for shape in slide.shapes:
+                if not shape.has_text_frame or shape.top is None or shape.height is None:
+                    continue
+                if shape.top / 914400 > 1.0 or shape.height / 914400 > 1.5:
+                    continue
+                if shape.left is None:
+                    continue
+                left_inch = shape.left / 914400
+                if left_inch < TITLE_SAFE_LEFT_INCH:
+                    offenders.append(
+                        f"Slide {slide_num}: {shape.name!r} "
+                        f"(placeholder={shape.is_placeholder}) left={left_inch:.2f} in "
+                        f"< {TITLE_SAFE_LEFT_INCH} in,text={shape.text_frame.text[:30]!r}"
+                    )
+
+        assert not offenders, "title 落在安全左界之左:\n" + "\n".join(offenders[:8])
+
+    def test_no_new_shape_overlaps_left_decoration(self):
+        """新投影片上沒有任何 shape 與母片「可迴避的左側裝飾」幾何重疊
+
+        比「left >= 常數」更直接:常數調錯時這支會抓到真正的重疊,
+        而不是只驗證程式碼與自己的常數一致。
+
+        只採計**可迴避**的裝飾(靠左緣、右緣未過投影片中線)。滿版背景
+        與橫幅往右移一寸也閃不開,本來就是 title 要疊在上面的設計元素,
+        把它們算進來會讓這支測試變成必紅的假警報。
+        """
+        prs, result, _ = self._improve("_vqdecov")
+
+        slide_w = prs.slide_width / 914400
+        decorations = [
+            (
+                sh.left / 914400,
+                sh.top / 914400,
+                (sh.left + sh.width) / 914400,
+                (sh.top + sh.height) / 914400,
+                sh.name,
+            )
+            for sh in prs.slide_master.shapes
+            if not sh.is_placeholder
+            and None not in (sh.left, sh.top, sh.width, sh.height)
+            and sh.width / 914400 < slide_w * 0.9
+            and sh.left / 914400 <= slide_w * 0.25
+            and (sh.left + sh.width) / 914400 < slide_w * 0.5
+        ]
+        assert decorations, "fixture 應含至少一個可迴避的左側裝飾,否則這支測試什麼都沒驗到"
+
+        overlaps = []
+        for offset, slide in enumerate(list(prs.slides)[result.original_slide_count :]):
+            slide_num = result.original_slide_count + offset + 1
+            for shape in slide.shapes:
+                if None in (shape.left, shape.top, shape.width, shape.height):
+                    continue
+                s_l = shape.left / 914400
+                s_t = shape.top / 914400
+                s_r = (shape.left + shape.width) / 914400
+                s_b = (shape.top + shape.height) / 914400
+                for d_l, d_t, d_r, d_b, d_name in decorations:
+                    if s_l < d_r and s_r > d_l and s_t < d_b and s_b > d_t:
+                        overlaps.append(
+                            f"Slide {slide_num}: {shape.name!r} "
+                            f"({s_l:.2f},{s_t:.2f})-({s_r:.2f},{s_b:.2f}) "
+                            f"壓到母片裝飾 {d_name!r} "
+                            f"({d_l:.2f},{d_t:.2f})-({d_r:.2f},{d_b:.2f})"
+                        )
+
+        assert not overlaps, "新投影片壓到母片左側裝飾:\n" + "\n".join(overlaps[:8])
+
+
+class TestBodyClearsLeftDecoration:
+    """P4:body 內容也要避開母片左側裝飾(量測後才發現的缺口)
+
+    量測(`scripts/measure_master_decoration.py`)顯示 260811 母片的
+    `Picture 14` 佔 x=0.00~1.12、y=1.23~6.38,而舊的 body margin
+    `TITLE_SAFE_LEFT_INCH - 0.2` = 1.00 in 比它的右緣還左 0.12 in,
+    正文首字會壓在裝飾上。該 layout 沒有 `showMasterSp="0"`,母片
+    shape 確實會被渲染。
+
+    這支需要真實客戶檔(合成 fixture 沒有 body 帶的左側裝飾),
+    CI 上會 skip —— 這是已知且刻意的。
+    """
+
+    def test_body_clears_master_left_decoration(self):
+        input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
+        if not input_pptx or not eval_path:
+            pytest.skip("需要 260811 pptx 與 eval JSON")
+        if input_pptx.parent == SYNTHETIC_FIXTURE_DIR:
+            pytest.skip("只有合成 fixture,body 帶沒有左側裝飾可驗")
+
+        prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_vqbodydec")
+
+        slide_w = prs.slide_width / 914400
+        decorations = [
+            (
+                sh.left / 914400,
+                sh.top / 914400,
+                (sh.left + sh.width) / 914400,
+                (sh.top + sh.height) / 914400,
+                sh.name,
+            )
+            for sh in prs.slide_master.shapes
+            if not sh.is_placeholder
+            and None not in (sh.left, sh.top, sh.width, sh.height)
+            and sh.width / 914400 < slide_w * 0.9
+            and sh.left / 914400 <= slide_w * 0.25
+            and (sh.left + sh.width) / 914400 < slide_w * 0.5
+        ]
+        if not decorations:
+            pytest.skip("此母片沒有可迴避的左側裝飾")
+
+        overlaps = []
+        for offset, slide in enumerate(list(prs.slides)[result.original_slide_count :]):
+            slide_num = result.original_slide_count + offset + 1
+            for shape in slide.shapes:
+                if None in (shape.left, shape.top, shape.width, shape.height):
+                    continue
+                s_l = shape.left / 914400
+                s_t = shape.top / 914400
+                s_r = (shape.left + shape.width) / 914400
+                s_b = (shape.top + shape.height) / 914400
+                for d_l, d_t, d_r, d_b, d_name in decorations:
+                    if s_l < d_r and s_r > d_l and s_t < d_b and s_b > d_t:
+                        overlaps.append(
+                            f"Slide {slide_num}: {shape.name!r} "
+                            f"({s_l:.2f},{s_t:.2f})-({s_r:.2f},{s_b:.2f}) "
+                            f"壓到母片裝飾 {d_name!r} "
+                            f"({d_l:.2f},{d_t:.2f})-({d_r:.2f},{d_b:.2f})"
+                        )
+
+        assert not overlaps, "新投影片壓到母片左側裝飾:\n" + "\n".join(overlaps[:8])
 
 
 class TestBodyHasEnoughHeight:

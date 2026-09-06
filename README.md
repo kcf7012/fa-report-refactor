@@ -21,7 +21,8 @@
 uv sync
 
 # 方式 B:使用既有 .venv
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate        # Windows:.venv\Scripts\activate
 pip install -e ".[dev,llm]"
 ```
 
@@ -151,20 +152,20 @@ fa-improve /path/to/report.pptx --eval /path/to/eval.json --output /path/to/outp
 ## 開發
 
 ```bash
-# 跑測試(219 個,含 .ppt 轉換、母片保護、LLM、樣板、視覺元素、視覺品質)
-.venv/bin/python -m pytest tests/ -q
+# 跑測試(含 .ppt 轉換、母片保護、LLM、樣板、視覺元素、視覺品質)
+uv run pytest tests/ -q
 
 # 跑特定測試
-.venv/bin/python -m pytest tests/unit/test_visual_generators.py -v
+uv run pytest tests/unit/test_visual_generators.py -v
 
 # 跑母片保護測試(AGENTS.md § 9 必跑)
-.venv/bin/python -m pytest tests/unit/test_master_protection.py -v
+uv run pytest tests/unit/test_master_protection.py -v
 
-# 完整測試含覆蓋率(目標 ≥ 90%)
-.venv/bin/python -m pytest tests/ --cov=fa_improver --cov-report=term-missing
+# 完整測試含覆蓋率(目標 ≥ 80%,與 AGENTS.md 一致)
+uv run pytest tests/ --cov=fa_improver --cov-report=term-missing
 
 # Lint
-ruff check src/
+uv run ruff check src/
 
 # Pre-commit hooks(安裝一次,之後自動跑)
 pip install pre-commit
@@ -192,7 +193,7 @@ src/fa_improver/      # 主程式碼(35 模組)
 ├── llm/               # LLM Client
 └── utils/             # 工具(PPT 轉換)
 
-tests/                 # 219 個測試(216 passed + 3 skipped)
+tests/                 # CI 235 passed + 3 skipped;真實客戶檔在位 238 passed
 ├── unit/              # 12 個單元測試模組(含 test_master_protection.py、test_visual_quality.py)
 └── integration/       # 端對端測試(含 test_visual_quality.py、test_slide_rendering.py)
 

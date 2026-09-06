@@ -1,12 +1,11 @@
 """端對端改善流程測試"""
 
-from pathlib import Path
-
 import pytest
 from pptx import Presentation
 
 from fa_improver.improvers.orchestrator import ImprovementOrchestrator
 from fa_improver.parsers.evaluation_parser import parse_evaluation
+from fa_improver.paths import resolve_report_file
 
 
 class TestFullWorkflow:
@@ -39,12 +38,13 @@ class TestFullWorkflow:
 
     def test_improve_n160jcn_from_txt(self, sample_eval_txt, tmp_path):
         """測試從 TXT 評估改善 N160JCN-EEK"""
-        n160_pptx = (
-            Path(__file__).parent.parent.parent
-            / "report"
-            / "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
+        # 路徑由 fa_improver.paths 解析(見 P1)。原本用
+        # `Path(__file__).parent.parent.parent / "report"` 只到技能包根目錄,
+        # 而 N160JCN 檔在外層根倉庫,所以這個測試從來沒有真正跑過。
+        n160_pptx = resolve_report_file(
+            "N160JCN-EEK project 1pcs NG sample analysis report 260810.pptx"
         )
-        if sample_eval_txt is None or not n160_pptx.exists():
+        if sample_eval_txt is None or n160_pptx is None:
             pytest.skip("範例檔案不存在")
 
         evaluation = parse_evaluation(sample_eval_txt)

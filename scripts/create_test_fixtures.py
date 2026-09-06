@@ -10,14 +10,23 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from pptx import Presentation
 
+# 直接把 src/ 掛上 sys.path,不依賴 editable install 的 .pth。
+# 這支特別需要:它是文件裡「重現 CI 情境」的官方步驟,而會去重現 CI 情境的人
+# 八成正是在 .pth 壞掉、想搞清楚狀況的時候 —— 診斷工具本身不能跟著壞。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from fa_improver.paths import SKILL_ROOT  # noqa: E402
+
 
 def main() -> None:
     """建立所有測試 fixtures"""
-    report_dir = Path("report")
+    # v3.1.5(P1):原本 Path("report") 依賴 cwd,從別的目錄執行會寫錯地方
+    report_dir = SKILL_ROOT / "report"
     report_dir.mkdir(exist_ok=True)
 
     # 1. 建立測試 pptx(有母片 + 2 個 layouts)

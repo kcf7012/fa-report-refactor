@@ -19,7 +19,7 @@ from ..layout.selector import find_content_layout
 from ..parsers.filename_parser import FilenameInfo
 from ..templates.loader import TemplateLoader
 from ..visuals import ELAN_BLUE, ChecklistGenerator
-from ._safe_shape import TITLE_SAFE_LEFT_INCH
+from ._safe_shape import BODY_SAFE_LEFT_INCH, CONTENT_RIGHT_MARGIN_INCH
 from ._template_helper import get_resolved_placeholders, resolve_template
 
 if TYPE_CHECKING:
@@ -65,11 +65,11 @@ def _add_basic_info_slide_impl(
 
     # === 動態座標(v3.1.1 修正)===
     sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-    # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
-    margin = TITLE_SAFE_LEFT_INCH - 0.2
+    # P4:左邊界用有量測依據的 BODY_SAFE_LEFT_INCH,右留白獨立(見常數註解)
+    margin = BODY_SAFE_LEFT_INCH
     if margin < 0.5:
         margin = 0.5
-    content_w = sw - 2 * margin
+    content_w = sw - margin - CONTENT_RIGHT_MARGIN_INCH
 
     # 載入樣板
     template = resolve_template(template_loader, template_name)

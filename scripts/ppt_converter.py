@@ -8,6 +8,12 @@ Updated: 2026-01-28
 import os
 import subprocess
 import sys
+from pathlib import Path
+
+# 探測邏輯統一由 fa_improver.utils.ppt_converter 提供(v3.1.5 P1)。
+# 本腳本是 src/fa_improver/utils/ppt_converter.py 的前身,保留供既有流程呼叫。
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from fa_improver.utils.ppt_converter import find_libreoffice  # noqa: E402
 
 # 強制 stdout/stderr 使用 utf-8 編碼 (解決 Windows cp950 問題)
 if sys.platform.startswith("win"):
@@ -32,29 +38,8 @@ class PPTConverter:
 
         # 方法 1: 嘗試使用 LibreOffice
         try:
-            # 檢查 LibreOffice 是否安裝
-            libreoffice_paths = [
-                "libreoffice",
-                "/Applications/LibreOffice.app/Contents/MacOS/soffice",  # macOS
-                "/usr/bin/libreoffice",  # Linux
-                "C:\\Program Files\\LibreOffice\\program\\soffice.exe",  # Windows
-                "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",  # Windows 32-bit
-            ]
-
-            libreoffice_cmd = None
-            for path in libreoffice_paths:
-                try:
-                    if (
-                        os.path.exists(path)
-                        or subprocess.run(
-                            [path, "--version"], capture_output=True, timeout=2
-                        ).returncode
-                        == 0
-                    ):
-                        libreoffice_cmd = path
-                        break
-                except Exception:
-                    continue
+            # 檢查 LibreOffice 是否安裝(共用探測,涵蓋 macOS/Linux/Windows)
+            libreoffice_cmd = find_libreoffice()
 
             if libreoffice_cmd:
                 print("✓ 找到 LibreOffice，進行轉換...")
@@ -135,21 +120,3 @@ class PPTConverter:
                     print(f"✓ 已清理臨時文件: {temp_file}")
             except Exception as e:
                 print(f"✗ 無法刪除 {temp_file}: {e}")
-
-
-if __name__ == "__main__":
-    converter = PPTConverter()
-
-    ppt_file = r"C:\Users\KennyKang\Desktop\VibeCodingProj\fa-report-improvement-skill\ASUS NR2203_AUO_3pcs_NG_PCBA_Report_20220711.ppt"
-
-    if os.path.exists(ppt_file):
-        print(f"開始轉換: {ppt_file}\n")
-        pptx_file = converter.convert_ppt_to_pptx(ppt_file)
-
-        if pptx_file:
-            print("\n✓ 轉換成功!")
-            print(f"輸出文件: {pptx_file}")
-        else:
-            print("\n✗ 轉換失敗!")
-    else:
-        print(f"✗ 找不到文件: {ppt_file}")

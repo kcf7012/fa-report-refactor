@@ -5,10 +5,11 @@
 repos:
   # Python 程式碼格式與 lint
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    # v3.1.4 修正:從 v0.1.9 升級到 v0.16.5,與本機 ruff 0.16.5 對齊
+    # v3.1.4 修正:從 v0.1.9 升級,與本機 ruff 對齊
     # 舊版 hook 行為跟本機不一致,曾造成 6 個 import 排序問題被 commit 進去,
     # CI 才抓到(見 PR #1 Lint & Format 失敗)。升級後本機與 CI 行為一致。
-    rev: v0.16.5
+    # v3.1.5:與 pyproject.toml 的 ruff pin 及 uv.lock 同步為 0.16.6。
+    rev: v0.16.6
     hooks:
       # Lint 檢查(快速)
       - id: ruff
@@ -28,7 +29,9 @@ repos:
 
   # 基本檔案檢查
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    # v3.1.5:v4.5.0(2023)→ v6.0.0。舊版使用已棄用的 stage 名稱(commit/push),
+    # 每次執行都會警告。
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         types_or: [python, markdown, yaml, json]
@@ -42,12 +45,30 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
-  # pytest 必須通過(母片保護 + 89 個測試)
+  # 路徑守門(v3.1.5):唯一能機制性擋住路徑回歸的東西
+  - repo: local
+    hooks:
+      - id: no-hardcoded-paths
+        name: 路徑守門(禁止新增絕對路徑字面值)
+        entry: uv run --no-sync python scripts/check_no_hardcoded_paths.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  # pytest 必須通過(母片保護 + 全套測試)
   - repo: local
     hooks:
       - id: pytest
-        name: pytest(母片保護 + 105 測試)
-        entry: .venv/bin/python -m pytest tests/ -q --tb=short
+        name: pytest(母片保護 + 全套測試)
+        # v3.1.5:原本寫死 .venv/bin/python —— 這是全 repo 唯一假設 venv 內部
+        # 佈局的地方,POSIX-only 且 venv 換位置就失效。uv run 在 macOS /
+        # Linux / Windows 都正確。
+        # 原本用 --frozen,但柔伊第七輪查證抓到:--frozen 只是跳過更新
+        # uv.lock,**仍會 sync 環境**;真正需要的是 --no-sync(完全不 sync,
+        # 直接用現成的 venv)。CI 的 3.11/3.12 job 全掛過一次就是這個坑
+        # (uv run 依 .python-version 重新解析,把已裝好 dev extra 的環境
+        # 換成一個沒有 pytest 的空環境),本機 hook 用同樣參數才不會巧合躲過。
+        entry: uv run --no-sync pytest tests/ -q --tb=short
         language: system
         types: [python]
         pass_filenames: false

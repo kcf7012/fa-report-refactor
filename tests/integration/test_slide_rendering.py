@@ -30,15 +30,15 @@ if str(_SKILL_SRC) not in sys.path:
     sys.path.insert(0, str(_SKILL_SRC))
 
 # v3.1.4 修正(稽核 #2):改用動態 fixture resolver
+from fa_improver.paths import SKILL_ROOT  # noqa: E402
 from tests.integration._fixture_resolver import (  # noqa: E402
-    SYNTHETIC_FIXTURE_DIR,
     find_project_root,
     get_report_dir,
     resolve_eval_json,
     resolve_input_pptx,
 )
 
-PROJECT_ROOT = find_project_root() or SYNTHETIC_FIXTURE_DIR.parent.parent.parent
+PROJECT_ROOT = find_project_root() or SKILL_ROOT
 REPORT_DIR = get_report_dir()
 
 
@@ -124,7 +124,7 @@ class TestSlideRenderingNoEmptySlides:
         input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
         eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
         if not input_pptx or not eval_path:
-            pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
+            pytest.skip("找不到輸入 pptx 或對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
@@ -147,7 +147,7 @@ class TestSlideRenderingNoEmptySlides:
         input_pptx = resolve_input_pptx("MS_Meishan_ADO_445239_260716")
         eval_path = resolve_eval_json("MS_Meishan_ADO_445239_260716")
         if not input_pptx or not eval_path:
-            pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
+            pytest.skip("找不到輸入 pptx 或對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path)
 
@@ -194,7 +194,7 @@ class TestSlideRenderingBounds:
         input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
         eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
         if not input_pptx or not eval_path:
-            pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
+            pytest.skip("找不到輸入 pptx 或對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_smoke_bounds")
 
@@ -258,7 +258,7 @@ class TestSlideRenderingDynamicCoordinates:
         input_pptx = resolve_input_pptx("260811_Kobo_ZHT_RA6080_SPcomFailI")
         eval_path = resolve_eval_json("260811_Kobo_ZHT_RA6080_SPcomFailI")
         if not input_pptx or not eval_path:
-            pytest.skip(f"需要 {input_pptx.name} 與對應 eval JSON")
+            pytest.skip("找不到輸入 pptx 或對應 eval JSON")
 
         prs, result, _ = _run_improvement(input_pptx, eval_path, output_suffix="_smoke_dyn")
 

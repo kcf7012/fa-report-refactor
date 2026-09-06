@@ -15,8 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 # Workflow 級環境變數(全 jobs 可用)
+# ⚠️ UV_VERSION 要與本機 uv 版本一致(v3.1.5 起同為 0.8.22)。
+# 原本釘 "0.5"(實際解析成 0.5.31),與本機差了七個 minor 版本,
+# 導致 lockfile 行為與本機不同卻不會被發現。
+# ⚠️ CI 內的 uv run 一律加 --no-sync。
+# 每個 job 都已先跑 `uv sync --locked ...` 把環境準備好;若 uv run 不帶
+# --no-sync,它會依 .python-version(3.10)重新解析環境,在 matrix 的
+# 3.11/3.12 job 上等於**重建一個不含 dev extra 的環境**,結果就是
+# `error: Failed to spawn: pytest`。v3.1.5 把 .venv/bin/* 換成 uv run 時
+# 一度踩到這個坑,由 macOS runner 上線後的第一次 CI 抓到。
 env:
-  UV_VERSION: "0.5"
+  UV_VERSION: "0.8.22"
   PYTHON_DEFAULT: "3.10"
 
 jobs:
@@ -30,6 +39,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 路徑守門要比對 base commit,淺 clone 拿不到
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
@@ -41,25 +53,39 @@ jobs:
         run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install dependencies
-        run: uv sync --extra dev --extra llm
+        run: uv sync --locked --extra dev --extra llm
+
+      - name: 路徑守門(禁止新增絕對路徑字面值)
+        # PR 時比對 base ref;push 到 main 時比對前一個 commit
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "無可比對的 base,改掃 HEAD 的最後一個 commit"
+            BASE="HEAD~1"
+          fi
+          uv run --no-sync python scripts/check_no_hardcoded_paths.py --base "$BASE"
 
       - name: Ruff check
-        run: .venv/bin/ruff check src/ tests/ scripts/
+        run: uv run --no-sync ruff check src/ tests/ scripts/
 
       - name: Ruff format check
-        run: .venv/bin/ruff format --check src/ tests/ scripts/
+        run: uv run --no-sync ruff format --check src/ tests/ scripts/
 
   # ============================================
   # 測試(主要,Python 矩陣)
   # ============================================
   test:
-    name: Test (Python ${{ matrix.python-version }})
+    # 名稱必須帶 matrix.os,否則 ubuntu 與 macOS 的 job 名稱相同,
+    # branch protection 的 required status check 無法分辨兩者。
+    name: Test (${{ matrix.os }} / Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        # v3.1.5:加入 macOS —— 本專案已從 WSL 遷移到 macOS,
+        # 但 CI 一直只跑 ubuntu,跨平台問題完全沒有被守住。
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
@@ -75,15 +101,15 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --python ${{ matrix.python-version }} --extra dev --extra llm
+        run: uv sync --locked --python ${{ matrix.python-version }} --extra dev --extra llm
 
       - name: Create test fixtures
         # CI 環境沒有 report/*.pptx(被 .gitignore 排除),動態建立測試 fixtures
-        run: .venv/bin/python scripts/create_test_fixtures.py
+        run: uv run --no-sync python scripts/create_test_fixtures.py
 
       - name: Run test suite
         run: |
-          .venv/bin/pytest tests/ \
+          uv run --no-sync pytest tests/ \
             --cov=fa_improver \
             --cov-report=xml \
             --cov-report=term-missing \
@@ -93,23 +119,22 @@ jobs:
       - name: Check master protection (母片保護)
         run: |
           echo "=== 母片保護驗證 ==="
-          .venv/bin/pytest tests/unit/test_master_protection.py -v
+          uv run --no-sync pytest tests/unit/test_master_protection.py -v
 
       - name: Verify CLI entry point
         run: |
           echo "=== CLI 驗證 ==="
-          .venv/bin/python -m fa_improver --help
-          .venv/bin/fa-improve --help
+          uv run --no-sync python -m fa_improver --help
+          uv run --no-sync fa-improve --help
 
-      - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-
+      # v3.1.5(柔伊第七輪查證 E6):移除 Codecov 上傳步驟。CODECOV_TOKEN
+      # secret 從未設定,原本的 fail_ci_if_error: false 把每次的上傳失敗
+      # (`Token required - not valid tokenless upload`)吞掉,job 顯示綠色
+      # 但覆蓋率從來沒有真的上傳成功過 —— 屬於「看起來正常但從來沒運作過」。
+      # 下方的 Archive coverage report 步驟(actions/upload-artifact)不需要
+      # token,已足夠讓人取得 coverage.xml;要重新接 Codecov,先在
+      # codecov.io 註冊此 repo 取得 token、設成 GitHub secret,再把這個
+      # 步驟加回來。
       - name: Archive coverage report
         if: matrix.python-version == '3.10' && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
@@ -119,13 +144,47 @@ jobs:
           retention-days: 30
 
   # ============================================
+  # pre-commit(全 hook,含 CI 從未跑過的那幾個)
+  # ============================================
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: false
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_DEFAULT }}
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev --extra llm
+
+      - name: Create test fixtures
+        # local pytest hook 會跑全套測試,需要 fixture
+        run: uv run --no-sync python scripts/create_test_fixtures.py
+
+      - name: Run all pre-commit hooks
+        # v3.1.5:pre-commit 過去從未在 CI 跑過 —— CI 只手動重複了 ruff 那兩個
+        # hook,check-merge-conflict / check-yaml / detect-private-key 這些
+        # 從來沒有在 PR 上被執行過。「衝突標記沒清乾淨就 push」能連續兩輪
+        # 發生,直接原因就是這個缺口。
+        run: uv run --no-sync pre-commit run --all-files --show-diff-on-failure
+
+  # ============================================
   # Build distribution(僅 main 分支 / tag)
   # ============================================
   build:
     name: Build Distribution
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [lint, test]
+    needs: [lint, test, pre-commit]
     # 僅在 main 分支或 tag 推送時執行
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
 
@@ -142,10 +201,10 @@ jobs:
         run: uv python install ${{ env.PYTHON_DEFAULT }}
 
       - name: Install build dependencies
-        run: uv sync --extra dev --extra build  # build 套件需要
+        run: uv sync --locked --extra dev --extra build  # build 套件需要
 
       - name: Build sdist and wheel
-        run: .venv/bin/python -m build
+        run: uv run --no-sync python -m build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -157,7 +216,7 @@ jobs:
       - name: Verify package metadata
         run: |
           echo "=== Package metadata ==="
-          .venv/bin/python -c "
+          uv run --no-sync python -c "
           import sys
           if sys.version_info >= (3, 11):
               import tomllib

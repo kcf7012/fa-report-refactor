@@ -22,7 +22,7 @@ from ..visuals import (
     ChecklistGenerator,
     ComparisonTableGenerator,
 )
-from ._safe_shape import TITLE_SAFE_LEFT_INCH
+from ._safe_shape import BODY_SAFE_LEFT_INCH, CONTENT_RIGHT_MARGIN_INCH
 from ._template_helper import resolve_template
 
 
@@ -52,11 +52,11 @@ def add_analysis_method_slide(
 
         # === 動態座標 ===
         sw = slide_bounds["width_inch"] if slide_bounds else 10.0
-        # v3.1.4:與 _safe_shape safe_textbox fallback 對齊(margin=1.0,確保小 slide 不會太擠)
-        margin = TITLE_SAFE_LEFT_INCH - 0.2
+        # P4:左邊界用有量測依據的 BODY_SAFE_LEFT_INCH,右留白獨立(見常數註解)
+        margin = BODY_SAFE_LEFT_INCH
         if margin < 0.5:
             margin = 0.5
-        content_w = sw - 2 * margin
+        content_w = sw - margin - CONTENT_RIGHT_MARGIN_INCH
 
         # 標題 — 優先從樣板讀取,fallback 到預設
         title = _get_or_create_title(slide, slide_bounds)
@@ -80,7 +80,7 @@ def _add_8d_checklist(slide) -> None:
     """加入 8D 流程檢查清單"""
     gen = ChecklistGenerator(
         slide,
-        left=TITLE_SAFE_LEFT_INCH - 0.2,  # v3.1.4:與 _safe_shape 對齊
+        left=BODY_SAFE_LEFT_INCH,  # P4:body 安全左界(有量測依據)
         top=1.4,
         width=4.0,
         height=4.5,
@@ -101,7 +101,7 @@ def _add_8d_checklist(slide) -> None:
 
 def _add_method_comparison_table(slide, content_w: float = 9.0) -> None:
     """加入分析方法對照表(content_w 動態計算於 13.33 in 寬投影片)"""
-    table_left = TITLE_SAFE_LEFT_INCH - 0.2 + 4.0 + 0.3  # v3.1.4:與 _safe_shape 對齊
+    table_left = BODY_SAFE_LEFT_INCH + 4.0 + 0.3  # P4:body 安全左界(有量測依據)
     table_w = max(4.5, content_w - 4.0 - 0.3)
     gen = ComparisonTableGenerator(
         slide,

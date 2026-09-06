@@ -15,11 +15,14 @@
 """
 
 import sys
+import tempfile
 from pathlib import Path
 
 # 確保 src/ 在 path 中
 ROOT = Path(__file__).parent
 sys.path.insert(0, str(ROOT / "src"))
+
+from fa_improver.paths import get_report_dir, resolve_report_file  # noqa: E402
 
 
 def main():
@@ -37,7 +40,7 @@ def main():
     parser.add_argument(
         "--output",
         "-o",
-        default="/tmp/llm_improved.pptx",
+        default=str(Path(tempfile.gettempdir()) / "llm_improved.pptx"),
         help="輸出 pptx 路徑",
     )
     args = parser.parse_args()
@@ -72,13 +75,13 @@ def main():
     if args.report:
         report_path = Path(args.report).resolve()
     else:
-        # 預設找專案根目錄的 report/ (skill/.agents/skills → 向上 3 層)
-        default_report = ROOT.parent.parent.parent / "report" / "MS_Meishan_ADO_445239_260716.pptx"
-        report_path = default_report.resolve()
+        # 預設報告由 fa_improver.paths 解析(見 P1),不再靠寫死的相對層數
+        default_report = resolve_report_file("MS_Meishan_ADO_445239_260716.pptx")
+        report_path = default_report.resolve() if default_report else Path("")
 
     if not report_path.exists():
         # 嘗試其他報告
-        candidates = sorted((ROOT.parent.parent.parent / "report").glob("*.pptx"))
+        candidates = sorted(get_report_dir().glob("*.pptx"))
         # 排除 _improved.pptx(只選原始報告)
         original_reports = [c for c in candidates if "_improved" not in c.name]
         if original_reports:
